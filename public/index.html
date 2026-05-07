@@ -15,14 +15,25 @@
         #start-scherm button { margin-top: 0; }
 
         #quiz-container { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
-        .stats { display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 0.9rem; color: #666; font-weight: bold; }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            width: 100%;
+            box-sizing: border-box;
+        }
         .vraag-header { position: relative; margin-bottom: 15px; min-height: 50px; display: flex; align-items: center; justify-content: center; }
         
         .tip-btn { position: absolute; right: 0; background: #f1c40f; color: white; border: none; border-radius: 50%; width: 35px; height: 35px; min-width: 35px; min-height: 35px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; cursor: pointer; line-height: 0; padding: 0; margin: 0; }
         #tip-tekst { display: none; font-size: 0.85rem; font-style: italic; color: #7f8c8d; margin: 10px 0 20px 0; padding: 10px; background: #fff9e6; border-radius: 5px; border-left: 4px solid #f1c40f; text-align: left; }
         
         #antwoorden { display: grid; gap: 10px; margin: 20px 0; }
-        button { padding: 12px; border: 2px solid var(--primary); background: white; color: var(--primary); border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 100%; min-height: 50px; }
+        button { outline: none !important; padding: 12px; border: 2px solid var(--primary); background: white; color: var(--primary); border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 100%; min-height: 50px; }
         button:hover:not(.no-click):not(:disabled) { background: var(--primary); color: white; }
         button:disabled { opacity: 0.5; cursor: not-allowed; border-color: #ccc; color: #ccc; }
         
@@ -48,18 +59,64 @@
             background-color: white;
             height: 42px;
         }
+
         label {
             display: block;
             margin-bottom: 4px;
             color: #444;
+        }
+
+        .quiz-controls {
+            margin-top: 25px;
+            width: 100%;
+        }
+
+        /* De containers voor de knoppen */
+        #normal-controls, #confirm-controls {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+        }
+
+        /* Algemene stijl voor de knoppen in de controls */
+        .quiz-controls button {
+            flex: 1;
+            margin: 0;
+            height: 50px;
+            border: none; /* Verwijdert de standaard border */
+            outline: none; /* Verwijdert het blauwe randje bij klikken */
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        /* Specifieke kleuren zonder extra randjes */
+        .skip-btn { background-color: #f39c12; color: white; }
+        .stop-btn-alt { background-color: #95a5a6; color: white; }
+        .confirm-stop-btn { background-color: #e74c3c; color: white; }
+
+        /* Feedback bij indrukken (in plaats van een randje) */
+        .quiz-controls button:active {
+            opacity: 0.8;
+        }
+
+        .skip-btn {
+            background: #f39c12;
+            color: white;
+        }
+
+        .stop-btn-alt {
+            background: #95a5a6;
+            color: white;
         }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Multi-Quiz Perfect Mix</h1>
-    <p>Oefen je woorden en vertalingen</p>
+    <h1>Multi-Quiz Perfect Whizz</h1>
+    <p>Oefen woorden en vertalingen</p>
 </header>
 
 <div id="quiz-container">
@@ -69,6 +126,31 @@
         <select id="quiz-selectie" style="padding:10px; width:100%; margin-bottom:20px; border-radius:8px; border:1px solid #ddd;"></select>
         <button onclick="startQuiz()">Start de quiz</button>
         
+        <!-- FAVORIETEN GEDEELTE -->
+        <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 10px; position: relative;">
+            <span style="position: absolute; top: -12px; left: 15px; background: white; padding: 0 10px; font-size: 0.85rem; font-weight: bold; color: #7f8c8d;">Favorieten</span>
+            
+            <div id="fav-view-mode">
+                <select id="fav-selectie" style="margin-bottom: 10px;"></select>
+                
+                <!-- Deze knoppen hebben nu dezelfde opbouw als Quiz Admin -->
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <button onclick="toggleFavAdd(true)" style="background: #95a5a6; border-color: #95a5a6; color: white; margin: 0; flex: 1; outline: none;">+ Nieuwe fav</button>
+                    <button onclick="toggleDeleteFav()" style="background: #e74c3c; border-color: #e74c3c; color: white; margin: 0; flex: 1; outline: none;">- Verwijder fav</button>
+                </div>
+            </div>
+
+            <!-- Modus voor toevoegen blijft gelijk -->
+            <div id="fav-add-mode" style="display:none;">
+                <input type="text" id="fav-nieuw-input" placeholder="Naam nieuwe favorietenlijst...">
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <button onclick="saveNieuweFav()" style="background: var(--success); border-color: var(--success); color: white; margin: 0; flex: 1; outline: none;">OK</button>
+                    <button onclick="toggleFavAdd(false)" style="background: #95a5a6; border-color: #95a5a6; color: white; margin: 0; flex: 1; outline: none;">Annuleren</button>
+                </div>
+            </div>
+            <div id="fav-error" style="display:none; color: var(--danger); background: #fdeaea; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.85rem; border: 1px solid var(--danger);"></div>
+        </div>        
+
         <!-- NIEUW: Quiz Admin Kader -->
         <div style="margin-top: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 10px; position: relative;">
             <span style="position: absolute; top: -12px; left: 15px; background: white; padding: 0 10px; font-size: 0.85rem; font-weight: bold; color: #7f8c8d;">Quiz Admin</span>
@@ -141,6 +223,19 @@
             <button onclick="toggleDelete()" style="background: #95a5a6; color: white; border: none; flex: 1;">Annuleren</button>
         </div>
     </div>
+    <!-- ADMIN VERWIJDER FAVORIETEN GEDEELTE -->
+    <div id="delete-fav-paneel" style="display:none; margin-top: 20px; text-align: left; padding: 15px; background: #fdf2f2; border-radius: 8px; border: 1px solid #fab1a0;">
+        <h3 style="margin-top:0; color: #d63031;">Favorietenlijst Verwijderen</h3>
+        <p style="font-size: 0.8rem; margin-bottom: 10px;">Selecteer een favorietenlijst om te wissen:</p>
+        <select id="delete-fav-selectie" style="margin-bottom: 15px; border-color: #fab1a0;"></select>
+        
+        <div id="delete-fav-error" style="display:none; color: var(--danger); background: #fff; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.85rem; border: 1px solid var(--danger);"></div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button id="confirm-delete-fav-btn" onclick="executeDeleteFavoriet()" style="background: var(--danger); color: white; border: none; flex: 2; outline: none;">Definitief Wissen</button>
+            <button onclick="toggleDeleteFav()" style="background: #95a5a6; color: white; border: none; flex: 1; outline: none;">Annuleren</button>
+        </div>
+    </div>
 
     <!-- QUIZ GEDEELTE -->
     <div id="quiz-gedeelte" style="display:none;">
@@ -149,7 +244,12 @@
             <span id="live-perc"></span>
         </div>
         <div class="vraag-header">
-            <h2 id="vraag-tekst" style="width: 80%; margin: 0; font-size: 1.2rem;"></h2>
+            <!-- Nieuwe Hartjes knop -->
+            <button id="fav-hart-btn" class="tip-btn" style="position: absolute; right: 45px; background: none; border: 2px solid #ccc; color: black; font-size: 1.2rem;" onclick="toggleWoordFavoriet()">
+                &#9825;
+            </button>
+            
+            <h2 id="vraag-tekst" style="width: 70%; margin: 0; font-size: 1.2rem;"></h2>
             <button id="tip-btn" class="tip-btn" onclick="toonTip()">?</button>
         </div>
         <div id="tip-tekst"></div>
@@ -173,7 +273,19 @@
                 </div>
             </div>
         </div>
-        <button class="stop-btn" onclick="stopQuiz()">Stop de quiz</button>
+        <div class="quiz-controls">
+            <!-- Standaard knoppen -->
+            <div id="normal-controls">
+                <button class="skip-btn" onclick="slaOver()">Vraag overslaan</button>
+                <button class="stop-btn-alt" onclick="vraagStopBevestiging()">Stop de quiz</button>
+            </div>
+
+            <!-- Bevestigingsknoppen -->
+            <div id="confirm-controls" style="display: none;">
+                <button class="confirm-stop-btn" onclick="stopQuiz(true)">Ja, stop quiz</button>
+                <button class="stop-btn-alt" onclick="annuleerStop()">Annuleren</button>
+            </div>
+        </div>
     </div>
 
     <!-- RESULTAAT SCHERM -->
@@ -195,11 +307,14 @@ let vragen = [], huidigeVraag = 0, score = 0, mcBeantwoord = false;
 let alleWoordenData = []; 
 
 // Zet het jaartal in de footer
-document.getElementById('copyright-tekst').innerHTML = `&copy; ${new Date().getFullYear()} Multi-Quiz Perfect Mix - Alle rechten voorbehouden aan So Be IT Services`;
+document.getElementById('copyright-tekst').innerHTML = `&copy; ${new Date().getFullYear()} Multi-Quiz Perfect Whizz 1.03 - Alle rechten voorbehouden aan So Be IT Services (Belgium)`;
 
 // 1. Initialisatie: Quizlijst en Opties ophalen
 async function init() {
     try {
+        // Laad bestaande favorieten
+        await loadFavorieten();
+
         // Laad bestaande quiznamen voor de start-dropdown
         const qRes = await fetch('/api/quizzen');
         const quizzen = await qRes.json();
@@ -212,6 +327,14 @@ async function init() {
         const oRes = await fetch('/api/opties');
         alleWoordenData = await oRes.json();
         vulAdminDropdowns();
+
+        document.getElementById('fav-selectie').addEventListener('change', function() {
+            const btn = document.getElementById('btn-del-fav');
+            btn.dataset.confirmed = "";
+            btn.innerText = "- Verwijder fav";
+            btn.style.backgroundColor = "";
+            document.getElementById('fav-error').style.display = 'none';
+        });
     } catch (e) {
         console.error("Fout bij laden data:", e);
     }
@@ -394,10 +517,16 @@ async function startQuiz() {
     const res = await fetch(`/api/vragen/${encodeURIComponent(naam)}`);
     if(!res.ok) return alert("Kon quiz niet laden");
     
-    vragen = await res.json();
-    huidigeVraag = 0; score = 0;
+    const data = await res.json();
+    
+    // De server stuurt nu { type: 'F', vragen: [...] }
+    vragen = data.vragen; 
+    huidigeVraag = 0; 
+    score = 0; // Reset naar 0
+    
     document.getElementById('start-scherm').style.display = 'none';
     document.getElementById('quiz-gedeelte').style.display = 'block';
+    
     toonVraag();
 }
 
@@ -406,9 +535,39 @@ function toonVraag() {
     const v = vragen[huidigeVraag];
     document.getElementById('vraag-tekst').innerText = v.vraag;
     document.getElementById('progress').innerText = `Vraag ${huidigeVraag + 1}/${vragen.length}`;
+    
+    // Toon score
+    const toonScore = Number.isInteger(score) ? score : score.toFixed(1);
+    const percentage = huidigeVraag === 0 ? 100 : Math.round((score / huidigeVraag) * 100);
+    document.getElementById('live-perc').innerText = `Score: ${toonScore} (${percentage}%)`;
+    document.getElementById('live-perc').style.color = percentage < 50 ? 'var(--danger)' : 'var(--success)';
+
+    // Bepaal of we een favorieten-quiz spelen
+    const actieveQuizNaam = document.getElementById('quiz-selectie').value;
+    const isNuFavorietSpelen = Array.from(document.getElementById('fav-selectie').options)
+                                    .some(opt => opt.value === actieveQuizNaam);
+    
+    // 1. Hartje verbergen/tonen
+    document.getElementById('fav-hart-btn').style.visibility = isNuFavorietSpelen ? 'hidden' : 'visible';
+
+    // 2. "Vraag overslaan" knop disablen en visueel aanpassen
+    const skipBtn = document.querySelector('.skip-btn');
+    if (skipBtn) {
+        if (isNuFavorietSpelen) {
+            skipBtn.disabled = true;
+            skipBtn.style.opacity = "0.5";
+            skipBtn.style.cursor = "not-allowed";
+        } else {
+            skipBtn.disabled = false;
+            skipBtn.style.opacity = "1";
+            skipBtn.style.cursor = "pointer";
+        }
+    }
+    
     document.getElementById('tip-tekst').innerText = v.tip || "Geen tip";
     document.getElementById('tip-tekst').style.display = 'none';
 
+    // Antwoorden genereren
     const antwDiv = document.getElementById('antwoorden');
     antwDiv.innerHTML = '';
     v.antwoorden.forEach((tekst, index) => {
@@ -418,37 +577,88 @@ function toonVraag() {
         antwDiv.appendChild(btn);
     });
 
+    // Reset open vraag velden
     document.getElementById('open-input').value = '';
     document.getElementById('open-input').disabled = true;
+    document.getElementById('open-check-btn').disabled = true; // Ook de check-knop uit
     document.getElementById('open-beoordeling').style.display = 'none';
+
+    updateHartjeStatus();
 }
+
 
 function checkMC(btn, index, correctIndex) {
     if(mcBeantwoord) return;
     mcBeantwoord = true;
     
     const buttons = document.querySelectorAll('#antwoorden button');
+    
+    // Kleur de knoppen
     if(index === correctIndex) {
         btn.classList.add('correct-flash');
-        document.getElementById('open-input').disabled = false;
-        document.getElementById('open-check-btn').disabled = false;
-        document.getElementById('open-input').focus();
+        score += 0.5; 
     } else {
         btn.classList.add('wrong-flash');
         buttons[correctIndex].classList.add('correct-flash');
-        setTimeout(volgendeVraag, 2000);
     }
+
+    // Update live score display direct voor het eerste deel
+    const toonScore = Number.isInteger(score) ? score : score.toFixed(1);
+    document.getElementById('live-perc').innerText = `Score: ${toonScore}`;
+
+    // Activeer ALTIJD de middenkolom sectie, ongeacht goed of fout
+    document.getElementById('open-input').disabled = false;
+    document.getElementById('open-check-btn').disabled = false;
+    document.getElementById('open-input').focus();
+    
+    // Geef visuele feedback dat de gebruiker nu de middenkolom moet invullen
+    document.getElementById('open-vraag-container').style.borderColor = 'var(--primary)';
 }
 
 function checkOpenAntwoord() {
+    const input = document.getElementById('open-input');
+    //if(input.value.trim() === "") {
+    //    if(!confirm("Middenkolom leeg laten?")) return;
+    //}
+    
     document.getElementById('open-correct-display').value = vragen[huidigeVraag].middenkolom;
     document.getElementById('open-beoordeling').style.display = 'block';
+    document.getElementById('open-check-btn').disabled = true;
+    document.getElementById('open-input').disabled = true;
 }
 
+// Update beoordeelOpen voor 0.5 punt
 function beoordeelOpen(goed) {
-    if(goed) score++;
+    if(goed) score += 0.5; // HALVE PUNT
+    volgendeVraag();
+}
+
+async function slaOver() {
+    const favSelectie = document.getElementById('fav-selectie').value;
+    
+    // Als er een favoriet gekozen is, voeg dit woord automatisch toe (indien nog niet aanwezig)
+    if (favSelectie && favSelectie !== "") {
+        const v = vragen[huidigeVraag];
+        await fetch('/api/favorieten/toggle', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                favoriet: favSelectie,
+                woord: { taal: v.taal, boek: v.boek, hoofdstuk: v.hoofdstuk, volgnr: v.volgnr },
+                forceAdd: true // Optioneel: server-side logica om altijd toe te voegen
+            })
+        });
+    }
+    volgendeVraag();
+}
+
+function volgendeVraag() {
     huidigeVraag++;
-    if(huidigeVraag < vragen.length) toonVraag(); else toonResultaat();
+    if (huidigeVraag < vragen.length) {
+        toonVraag();
+    } else {
+        toonResultaat();
+    }
 }
 
 function toonResultaat() {
@@ -464,27 +674,42 @@ function toggleAdmin() {
     s.style.display = s.style.display === 'none' ? 'block' : 'none';
 }
 
-function stopQuiz() {
-    // Bevestiging vragen als de quiz nog bezig is
-    if (huidigeVraag < vragen.length && huidigeVraag > 0) {
-        if (!confirm("Weet je zeker dat je de quiz wilt stoppen? Je voortgang gaat verloren.")) {
-            return;
-        }
+function vraagStopBevestiging() {
+    // Verberg de gewone knoppen, toon de bevestiging
+    document.getElementById('normal-controls').style.display = 'none';
+    document.getElementById('confirm-controls').style.display = 'flex';
+}
+
+function annuleerStop() {
+    // Zet alles weer terug
+    document.getElementById('normal-controls').style.display = 'flex';
+    document.getElementById('confirm-controls').style.display = 'none';
+}
+
+function stopQuiz(geforceerd = false) {
+    // Als we al op het resultaat-scherm staan, hoeven we niet te bevestigen
+    const opResultaatScherm = document.getElementById('resultaat-scherm').style.display === 'block';
+
+    // Als we nog bezig zijn en niet geforceerd hebben (via de nieuwe knop), vraag bevestiging
+    if (!geforceerd && !opResultaatScherm && vragen.length > 0) {
+        vraagStopBevestiging();
+        return;
     }
 
-    // Reset variabelen
+    // De eigenlijke RESET logica
     vragen = [];
     huidigeVraag = 0;
     score = 0;
     mcBeantwoord = false;
 
-    // Schermen wisselen
     document.getElementById('quiz-gedeelte').style.display = 'none';
     document.getElementById('resultaat-scherm').style.display = 'none';
-    document.getElementById('admin-paneel').style.display = 'none';
     document.getElementById('start-scherm').style.display = 'block';
+    
+    // Reset de knoppen-weergave voor de volgende keer
+    annuleerStop();
 
-    // Input velden leegmaken
+    // Inputs leegmaken
     document.getElementById('open-input').value = '';
     document.getElementById('open-beoordeling').style.display = 'none';
 }
@@ -552,6 +777,247 @@ async function deleteQuiz() {
         toonDeleteFout("Server onbereikbaar.");
         btn.dataset.confirmed = "";
         btn.innerText = "Definitief Wissen";
+    }
+}
+
+// FAVORIETEN
+async function loadFavorieten() {
+    const res = await fetch('/api/favorieten');
+    const favs = await res.json();
+    const select = document.getElementById('fav-selectie');
+    select.innerHTML = ''; 
+
+    // De neutrale beginwaarde
+    const defaultOpt = new Option("-- Kies eventueel favorietenlijst --", "");
+    defaultOpt.disabled = true;
+    defaultOpt.selected = true;
+    select.add(defaultOpt);
+
+    favs.forEach(f => select.add(new Option(f, f)));
+}
+
+function toonFavFout(bericht) {
+    const errorDiv = document.getElementById('fav-error');
+    if (bericht) {
+        errorDiv.innerText = bericht;
+        errorDiv.style.display = 'block';
+    } else {
+        errorDiv.style.display = 'none';
+    }
+}
+
+// Wisselt tussen de dropdown en het invoerveld
+function toggleFavAdd(showInput) {
+    document.getElementById('fav-view-mode').style.display = showInput ? 'none' : 'block';
+    document.getElementById('fav-add-mode').style.display = showInput ? 'block' : 'none';
+    toonFavFout(null); // Reset foutmeldingen
+    
+    if (showInput) {
+        const input = document.getElementById('fav-nieuw-input');
+        input.value = '';
+        input.focus();
+    }
+}
+
+// De eigenlijke "OK" actie voor het opslaan
+async function saveNieuweFav() {
+    const input = document.getElementById('fav-nieuw-input');
+    const schoneNaam = input.value.trim();
+    
+    if (!schoneNaam) {
+        return toonFavFout("Vul aub een naam in.");
+    }
+
+    // Check op unieke naam
+    const bestaande = Array.from(document.getElementById('quiz-selectie').options).map(o => o.value.toLowerCase());
+    if (bestaande.includes(schoneNaam.toLowerCase())) {
+        return toonFavFout("Deze naam bestaat al!");
+    }
+
+    try {
+        const res = await fetch('/api/favorieten', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ quiznaam: schoneNaam })
+        });
+        
+        if (res.ok) {
+            // Voeg toe aan dropdown
+            const select = document.getElementById('fav-selectie');
+            select.add(new Option(schoneNaam, schoneNaam));
+            select.value = schoneNaam;
+            
+            // Ook aan de hoofd-quiz-selectie toevoegen
+            document.getElementById('quiz-selectie').add(new Option(schoneNaam, schoneNaam));
+            
+            // Terug naar normale weergave
+            toggleFavAdd(false);
+        } else {
+            toonFavFout("Fout bij opslaan favoriet.");
+        }
+    } catch (e) {
+        toonFavFout("Server onbereikbaar.");
+    }
+}
+
+async function addFavorietPrompt() {
+     toonFavFout(null); // Reset fouten
+    const naam = prompt("Geef een unieke naam voor de nieuwe favorietenlijst:");
+    if (!naam) return;
+    const schoneNaam = naam.trim();
+    if (schoneNaam === "") return;
+
+    const select = document.getElementById('fav-selectie');
+    const bestaande = Array.from(document.getElementById('quiz-selectie').options).map(o => o.value.toLowerCase());
+
+    if (bestaande.includes(schoneNaam.toLowerCase())) {
+        return toonFavFout("Deze naam bestaat al in de favorietenlijst!");
+    }
+
+    try {
+        const res = await fetch('/api/favorieten', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ quiznaam: schoneNaam })
+        });
+        
+        if (res.ok) {
+            // Voeg de nieuwe favoriet toe aan de dropdown zonder de pagina te herladen
+            const nieuweOptie = new Option(schoneNaam, schoneNaam);
+            select.add(nieuweOptie);
+            
+            // Selecteer de nieuwe favoriet direct
+            select.value = schoneNaam;
+
+            // Optioneel: ververs ook de hoofd-quiz-selectie als je wilt dat hij daar ook verschijnt
+            document.getElementById('quiz-selectie').add(new Option(schoneNaam, schoneNaam));
+        } else {
+            toonFavFout("Server fout bij aanmaken favoriet.");
+        }
+    } catch (e) {
+        toonFavFout("Kon geen verbinding maken met de server.");
+    }
+}
+
+// 1. Wissel tussen startscherm en het verwijder-scherm voor favorieten
+async function toggleDeleteFav() {
+    const paneel = document.getElementById('delete-fav-paneel');
+    const start = document.getElementById('start-scherm');
+    const errorDiv = document.getElementById('delete-fav-error');
+    errorDiv.style.display = 'none';
+
+    if (paneel.style.display === 'none') {
+        // Haal de actuele lijst met favorieten op
+        const res = await fetch('/api/favorieten');
+        const favs = await res.json();
+        const select = document.getElementById('delete-fav-selectie');
+        select.innerHTML = '';
+        
+        if (favs.length === 0) {
+            alert("Er zijn geen favorietenlijsten om te verwijderen.");
+            return;
+        }
+        
+        favs.forEach(f => select.add(new Option(f, f)));
+        paneel.style.display = 'block';
+        start.style.display = 'none';
+    } else {
+        paneel.style.display = 'none';
+        start.style.display = 'block';
+        // Reset de knoptekst als we annuleren
+        const btn = document.getElementById('confirm-delete-fav-btn');
+        btn.dataset.confirmed = "";
+        btn.innerText = "Definitief Wissen";
+    }
+}
+
+// 2. De eigenlijke verwijdering (met dubbele klik bevestiging)
+async function executeDeleteFavoriet() {
+    const select = document.getElementById('delete-fav-selectie');
+    const naam = select.value;
+    const btn = document.getElementById('confirm-delete-fav-btn');
+    const errorDiv = document.getElementById('delete-fav-error');
+
+    if (!btn.dataset.confirmed) {
+        btn.dataset.confirmed = "true";
+        btn.innerText = "Klik nogmaals om te bevestigen";
+        errorDiv.innerText = `Weet je zeker dat je "${naam}" wilt wissen?`;
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/quizzen/${encodeURIComponent(naam)}`, { method: 'DELETE' });
+        if (res.ok) {
+            location.reload();
+        } else {
+            errorDiv.innerText = "Fout bij verwijderen.";
+            btn.dataset.confirmed = "";
+            btn.innerText = "Definitief Wissen";
+        }
+    } catch (e) {
+        errorDiv.innerText = "Server onbereikbaar.";
+        btn.dataset.confirmed = "";
+        btn.innerText = "Definitief Wissen";
+    }
+}
+
+// Voeg deze functie toe om het hartje visueel bij te werken
+async function updateHartjeStatus() {
+    const favSelectie = document.getElementById('fav-selectie').value;
+    const hartBtn = document.getElementById('fav-hart-btn');
+    
+    if (!favSelectie || favSelectie === "") {
+        hartBtn.style.display = 'none'; // Verberg hartje als geen favo gekozen is
+        return;
+    }
+    
+    hartBtn.style.display = 'flex';
+    const v = vragen[huidigeVraag];
+    
+    // We sturen de metadata van de huidige vraag naar de server
+    const res = await fetch('/api/favorieten/check', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            favoriet: favSelectie,
+            woorden: [{ 
+                taal: v.taal, boek: v.boek, hoofdstuk: v.hoofdstuk, volgnr: v.volgnr 
+            }]
+        })
+    });
+    
+    const [isFavoriet] = await res.json();
+    
+    if (isFavoriet) {
+        hartBtn.innerHTML = '&#10084;'; // Rood hartje
+        hartBtn.style.color = 'var(--danger)';
+        hartBtn.style.borderColor = 'var(--danger)';
+    } else {
+        hartBtn.innerHTML = '&#9825;'; // Open hartje
+        hartBtn.style.color = 'black';
+        hartBtn.style.borderColor = '#ccc';
+    }
+}
+
+// Functie voor de klik op het hartje
+async function toggleWoordFavoriet() {
+    const favSelectie = document.getElementById('fav-selectie').value;
+    const v = vragen[huidigeVraag];
+
+    const res = await fetch('/api/favorieten/toggle', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            favoriet: favSelectie,
+            woord: { 
+                taal: v.taal, boek: v.boek, hoofdstuk: v.hoofdstuk, volgnr: v.volgnr 
+            }
+        })
+    });
+
+    if (res.ok) {
+        updateHartjeStatus(); // Update visueel
     }
 }
 
