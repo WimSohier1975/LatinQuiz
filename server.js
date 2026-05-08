@@ -1,17 +1,156 @@
 const express = require('express');
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 const XLSX = require('xlsx');
 const fs = require('fs');
+
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(session({
+    secret: 'quiz-super-geheim-sleutel',
+    resave: false,
+    saveUninitialized: false, // Belangrijk: op false zetten
+    cookie: { 
+        secure: false, // Moet op false staan voor lokale ontwikkeling (http)
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 uur geldig
+    }
+}));
+
 app.use(express.static('public'));
 
 const WOORDEN_FILE = 'woorden.xlsx';
 const CONFIG_FILE = 'config.xlsx';
 const PORT = process.env.PORT || 3000;
 
+// Middleware om te checken of iemand Admin is
+const checkAdmin = (req, res, next) => {
+    if (req.session.ingelogd && req.session.rol === 'Admin') {
+        next();
+    } else {
+        res.status(403).send("Toegang geweigerd: Alleen voor Admins");
+    }
+};
+
+app.get('/api/admin/gebruikers', checkAdmin, (req, res) => {
+    try {
+        const workbook = XLSX.readFile(CONFIG_FILE);
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets['gebruikers']);
+        // Stuur wachtwoorden nooit mee
+        const veiligData = data.map(u => ({
+            gebruikersnaam: u.gebruikersnaam,
+            rol: u.rol
+        }));
+        res.json(veiligData);
+    } catch (e) {
+        res.status(500).json([]);
+    }
+});
+
+// Middleware om toegang te blokkeren voor niet-ingelogde mensen
+const checkLogin = (req, res, next) => {
+    if (req.session && req.session.ingelogd) {
+        next();
+    } else {
+        res.status(403).json({ error: "Niet ingelogd" });
+    }
+};
+
+app.get('/api/me', (req, res) => {
+    if (req.session && req.session.ingelogd) {
+        res.json({ ingelogd: true, rol: req.session.rol });
+    } else {
+        res.status(401).json({ ingelogd: false });
+    }
+});
+
+app.post('/api/login', async (req, res) => {
+    try {
+        const { gebruikersnaam, wachtwoord } = req.body;
+        //console.log("Login poging voor:", gebruikersnaam);
+
+        const workbook = XLSX.readFile(CONFIG_FILE);
+        const gebruikers = XLSX.utils.sheet_to_json(workbook.Sheets['gebruikers']);
+
+        // ZOEK ALLEEN OP NAAM (niet op wachtwoord, want dat is een hash!)
+        const gebruiker = gebruikers.find(u => String(u.gebruikersnaam).trim() === String(gebruikersnaam).trim());
+
+        if (gebruiker) {
+            //console.log("Gebruiker gevonden, wachtwoord vergelijken...");
+            
+            // Vergelijk het ingevoerde wachtwoord met de hash uit Excel
+            const match = await bcrypt.compare(String(wachtwoord), String(gebruiker.wachtwoord));
+            
+            if (match) {
+                req.session.ingelogd = true;
+                req.session.gebruiker = gebruiker.gebruikersnaam;
+                req.session.rol = gebruiker.rol; 
+                //console.log("Match! Ingelogd als:", gebruiker.rol);
+                return res.json({ success: true, rol: gebruiker.rol });
+            } else {
+                console.log("Wachtwoord matcht niet met de hash.");
+            }
+        } else {
+            console.log("Gebruikersnaam niet gevonden in Excel.");
+        }
+        
+        res.status(401).json({ success: false, bericht: "Onjuiste gegevens" });
+    } catch (e) {
+        console.error("Login Error:", e);
+        res.status(500).send("Server fout");
+    }
+});
+
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).send("Kon niet uitloggen");
+        }
+        res.clearCookie('connect.sid'); // Verwijder de sessie-cookie in de browser
+        res.json({ success: true });
+    });
+});
+
+// API om gebruiker toe te voegen (met hashing!)
+app.post('/api/admin/gebruikers', checkAdmin, async (req, res) => {
+    const { nieuweNaam, nieuwWachtwoord, nieuweRol } = req.body;
+    const hash = await bcrypt.hash(String(nieuwWachtwoord), 10);
+    
+    const workbook = XLSX.readFile(CONFIG_FILE);
+    let data = XLSX.utils.sheet_to_json(workbook.Sheets['gebruikers']);
+    
+    data.push({ gebruikersnaam: nieuweNaam, wachtwoord: hash, rol: nieuweRol });
+    
+    workbook.Sheets['gebruikers'] = XLSX.utils.sheet_to_json(data); // foutje in XLSX utils fix:
+    const newSheet = XLSX.utils.json_to_sheet(data);
+    workbook.Sheets['gebruikers'] = newSheet;
+    XLSX.writeFile(workbook, CONFIG_FILE);
+    res.json({ success: true });
+});
+
+app.delete('/api/admin/gebruikers/:naam', checkAdmin, (req, res) => {
+    try {
+        const naam = decodeURIComponent(req.params.naam).trim();
+        const workbook = XLSX.readFile(CONFIG_FILE);
+        let data = XLSX.utils.sheet_to_json(workbook.Sheets['gebruikers']);
+        
+        // Filter de te verwijderen gebruiker eruit
+        const nieuweData = data.filter(u => String(u.gebruikersnaam).trim() !== naam);
+        
+        const newSheet = XLSX.utils.json_to_sheet(nieuweData);
+        workbook.Sheets['gebruikers'] = newSheet;
+        XLSX.writeFile(workbook, CONFIG_FILE);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).send("Fout bij verwijderen gebruiker.");
+    }
+});
+
 // Haal alleen favoriete quizzen op
-app.get('/api/favorieten', (req, res) => {
+app.get('/api/favorieten', checkLogin, (req, res) => {
     try {
         const workbook = XLSX.readFile(CONFIG_FILE);
         const data = XLSX.utils.sheet_to_json(workbook.Sheets['quizzen']);
@@ -30,7 +169,7 @@ app.get('/api/favorieten', (req, res) => {
 });
 
 // Voeg een nieuwe favoriet-naam toe
-app.post('/api/favorieten', (req, res) => {
+app.post('/api/favorieten', checkLogin, (req, res) => {
     try {
         const { quiznaam } = req.body;
         const workbook = fs.existsSync(CONFIG_FILE) ? XLSX.readFile(CONFIG_FILE) : XLSX.utils.book_new();
@@ -46,7 +185,7 @@ app.post('/api/favorieten', (req, res) => {
 });
 
 // Check of woorden in de geselecteerde favoriet staan
-app.post('/api/favorieten/check', (req, res) => {
+app.post('/api/favorieten/check', checkLogin, (req, res) => {
     try {
         const { favoriet, woorden } = req.body; // woorden is een array van {taal, boek, hoofdstuk, volgnr}
         const workbook = XLSX.readFile(CONFIG_FILE);
@@ -67,7 +206,7 @@ app.post('/api/favorieten/check', (req, res) => {
 });
 
 // Toggle woord in favorieten (Toevoegen of Verwijderen)
-app.post('/api/favorieten/toggle', (req, res) => {
+app.post('/api/favorieten/toggle', checkLogin, (req, res) => {
     try {
         const { favoriet, woord } = req.body;
         const workbook = fs.existsSync(CONFIG_FILE) ? XLSX.readFile(CONFIG_FILE) : XLSX.utils.book_new();
@@ -97,7 +236,7 @@ app.post('/api/favorieten/toggle', (req, res) => {
 });
 
 // 1. Haal de quiznamen op uit config.xlsx
-app.get('/api/quizzen', (req, res) => {
+app.get('/api/quizzen', checkLogin, (req, res) => {
     try {
         const workbook = XLSX.readFile(CONFIG_FILE);
         const sheet = workbook.Sheets['quizzen'];
@@ -108,7 +247,7 @@ app.get('/api/quizzen', (req, res) => {
     }
 });
 
-app.post('/api/quizzen', (req, res) => {
+app.post('/api/quizzen', checkLogin, (req, res) => {
     try {
         const nieuweQuiz = req.body;
         const workbook = fs.existsSync(CONFIG_FILE) ? XLSX.readFile(CONFIG_FILE) : XLSX.utils.book_new();
@@ -134,7 +273,7 @@ app.post('/api/quizzen', (req, res) => {
 });
 
 //Haal alleen tijdelijke quizzen op
-app.get('/api/quizzen/tijdelijk', (req, res) => {
+app.get('/api/quizzen/tijdelijk', checkLogin, (req, res) => {
     try {
         const workbook = XLSX.readFile(CONFIG_FILE);
         const data = XLSX.utils.sheet_to_json(workbook.Sheets['quizzen']);
@@ -144,7 +283,7 @@ app.get('/api/quizzen/tijdelijk', (req, res) => {
 });
 
 // Verwijder een quiz of favorietenlijst EN alle bijbehorende woorden
-app.delete('/api/quizzen/:naam', (req, res) => {
+app.delete('/api/quizzen/:naam', checkLogin, (req, res) => {
     try {
         const naam = decodeURIComponent(req.params.naam).trim();
         const workbook = XLSX.readFile(CONFIG_FILE);
@@ -174,7 +313,7 @@ app.delete('/api/quizzen/:naam', (req, res) => {
 });
 
 // 2. Genereer quiz met filters voor taal, boek, hoofdstuk en volgnummers
-app.get('/api/vragen/:quiznaam', (req, res) => {
+app.get('/api/vragen/:quiznaam', checkLogin, (req, res) => {
     try {
         const configWb = XLSX.readFile(CONFIG_FILE);
         const configData = XLSX.utils.sheet_to_json(configWb.Sheets['quizzen']);
@@ -188,6 +327,19 @@ app.get('/api/vragen/:quiznaam', (req, res) => {
         const alleWoorden = XLSX.utils.sheet_to_json(woordenWb.Sheets[woordenWb.SheetNames[0]]);
 
         let gefilterdeWoorden = [];
+
+        // --- GUEST BEPERKING ---
+        if (req.session.rol === 'Guest') {
+            const workbook = XLSX.readFile(CONFIG_FILE);
+            const alleQuizzen = XLSX.utils.sheet_to_json(workbook.Sheets['quizzen']);
+            
+            // We pakken de allereerste quiznaam uit de Excel-lijst
+            const eersteQuizNaam = alleQuizzen.length > 0 ? String(alleQuizzen[0].quiznaam).trim() : null;
+
+            if (gezochteQuiz !== eersteQuizNaam) {
+                return res.status(403).send("Als gast mag je alleen de eerste quiz uitproberen.");
+            }
+        }        
 
         // 1. CHECK OF HET EEN FAVORIETEN-QUIZ IS
         if (String(quizConf.type).toUpperCase() === 'F') {
@@ -282,7 +434,7 @@ app.get('/api/vragen/:quiznaam', (req, res) => {
 });
 
 // 3. Beschikbare opties uit woordenlijst om nieuwe quiz te kunnen maken
-app.get('/api/opties', (req, res) => {
+app.get('/api/opties', checkLogin, (req, res) => {
     try {
         const workbook = XLSX.readFile(WOORDEN_FILE);
         const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames]);
