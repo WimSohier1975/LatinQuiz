@@ -376,10 +376,14 @@
 
         <!-- 4. RESULTAAT SCHERM -->
         <div id="resultaat-scherm" style="display:none;">
-            <h3 id="resultaat-titel"></h3>
-            <h2>Quiz Voltooid!</h2>
-            <h1 id="eind-score"></h1>
-            <p id="eind-percentage"></p>
+            <h3 id="resultaat-titel"></h3> 
+            <h2>Quiz Voltooid!</h2> 
+            <!-- Nieuwe toegeegde elementen voor extra details -->
+            <h3 id="resultaat-quiznaam" style="margin: 5px 0; color: #2c3e50;"></h3>
+            <p id="resultaat-datumtijd" style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 20px;"></p>
+            
+            <h1 id="eind-score"></h1> 
+            <p id="eind-percentage"></p> 
             <button onclick="stopQuiz()" style="background: var(--primary); color:white; border:none;">Nog een quiz</button>
         </div>
 
@@ -432,6 +436,13 @@
                         <label class="form-label-sub" style="font-weight: bold;">Tot nr:</label>
                         <select id="new-tot"></select>
                     </div>
+                </div>
+
+                <!-- NIEUW: OPTIE VOOR MIDDENKOLOM CHECK -->
+                <div style="margin-bottom: 15px; text-align: left;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+                        <input type="checkbox" id="new-middenkolom" checked style="width: auto;"> Middenkolom controle inschakelen
+                    </label>
                 </div>
 
                 <div id="admin-error" class="error-box" style="display:none; margin-bottom: 15px;"></div>
@@ -535,6 +546,7 @@ const niveauOrde = [
 ];
 
 let vragen = [], huidigeVraag = 0, score = 0, mcBeantwoord = false;
+let middenkolomCheck = true;
 let alleWoordenData = []; 
 
 // Menu
@@ -1072,7 +1084,8 @@ async function saveQuiz() {
         boek: document.getElementById('new-boek').value,
         hoofdstuk: document.getElementById('new-hoofdstuk').value,
         volgnrVanaf: vanaf,
-        volgnrTot: tot
+        volgnrTot: tot,
+        middenkolom: document.getElementById('new-middenkolom').checked ? "Ja" : "Nee"
     };
 
     try {
@@ -1103,6 +1116,7 @@ async function startQuiz() {
     
     // De server stuurt nu { type: 'F', vragen: [...] }
     vragen = data.vragen; 
+    middenkolomCheck = data.middenkolomCheck;
     huidigeVraag = 0; 
     score = 0; // Reset naar 0
     
@@ -1160,11 +1174,18 @@ function toonVraag() {
     });
 
     // Reset open vraag velden
-    document.getElementById('open-input').value = '';
-    document.getElementById('open-input').disabled = true;
-    document.getElementById('open-check-btn').disabled = true; // Ook de check-knop uit
-    document.getElementById('open-beoordeling').style.display = 'none';
-
+    const openContainer = document.getElementById('open-vraag-container');
+    if (middenkolomCheck) {
+        openContainer.style.display = 'block';
+        openContainer.style.borderColor = '#ccc';
+        document.getElementById('open-input').value = '';
+        document.getElementById('open-input').disabled = true;
+        document.getElementById('open-check-btn').disabled = true;
+        document.getElementById('open-beoordeling').style.display = 'none';
+    } else {
+        openContainer.style.display = 'none'; // Volledig verbergen als het niet nodig is
+    }
+    
     updateHartjeStatus();
 }
 
@@ -1174,27 +1195,29 @@ function checkMC(btn, index, correctIndex) {
     mcBeantwoord = true;
     
     const buttons = document.querySelectorAll('#antwoorden button');
+    const isGoed = (index === correctIndex);
     
-    // Kleur de knoppen
-    if(index === correctIndex) {
+    if(isGoed) {
         btn.classList.add('correct-flash');
-        score += 0.5; 
+        score += middenkolomCheck ? 0.5 : 1.0; // <-- Dynamische score-toekenning
     } else {
         btn.classList.add('wrong-flash');
         buttons[correctIndex].classList.add('correct-flash');
     }
-
-    // Update live score display direct voor het eerste deel
+    
     const toonScore = Number.isInteger(score) ? score : score.toFixed(1);
     document.getElementById('live-perc').innerText = `Score: ${toonScore}`;
-
-    // Activeer ALTIJD de middenkolom sectie, ongeacht goed of fout
-    document.getElementById('open-input').disabled = false;
-    document.getElementById('open-check-btn').disabled = false;
-    document.getElementById('open-input').focus();
     
-    // Geef visuele feedback dat de gebruiker nu de middenkolom moet invullen
-    document.getElementById('open-vraag-container').style.borderColor = 'var(--primary)';
+    if (middenkolomCheck) {
+        // Activeer de middenkolom sectie
+        document.getElementById('open-input').disabled = false;
+        document.getElementById('open-check-btn').disabled = false;
+        document.getElementById('open-input').focus();
+        document.getElementById('open-vraag-container').style.borderColor = 'var(--primary)';
+    } else {
+        // Geen middenkolom check: wacht 1.5 seconde zodat de student de feedback ziet, ga dan door
+        setTimeout(volgendeVraag, 1500);
+    }
 }
 
 function checkOpenAntwoord() {
@@ -1242,7 +1265,21 @@ function volgendeVraag() {
 function toonResultaat() {
     document.getElementById('quiz-gedeelte').style.display = 'none';
     document.getElementById('resultaat-scherm').style.display = 'block';
+    
+    // Haal de geselecteerde quiznaam op uit de dropdown van het startscherm
+    const actieveQuizNaam = document.getElementById('quiz-selectie').value;
+    document.getElementById('resultaat-quiznaam').innerText = `Quiz: ${actieveQuizNaam}`;
+    
+    // Maak een actuele datum en tijdstempel aan in een mooi Nederlands formaat
+    const nu = new Date();
+    const opties = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    const datumTijdWeergave = nu.toLocaleDateString('nl-NL', opties);
+    document.getElementById('resultaat-datumtijd').innerText = `Afgerond op: ${datumTijdWeergave}`;
+    
+    // Toon de eindscore en bereken het percentage
     document.getElementById('eind-score').innerText = `${score} / ${vragen.length}`;
+    const percentage = vragen.length === 0 ? 100 : Math.round((score / vragen.length) * 100);
+    document.getElementById('eind-percentage').innerText = `Eindscore percentage: ${percentage}%`;
 }
 
 function toggleAdmin() {
