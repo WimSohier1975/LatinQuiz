@@ -330,6 +330,7 @@ app.post('/api/quizzen', checkLogin, (req, res) => {
             hoofdstuk: nieuweQuiz.hoofdstuk || "",
             volgnrVanaf: nieuweQuiz.volgnrVanaf || "",
             volgnrTot: nieuweQuiz.volgnrTot || "",
+            middenkolom: nieuweQuiz.middenkolom || "Ja",
             type: "T" // 'T' voor tijdelijk
         });
 
@@ -507,6 +508,7 @@ app.get('/api/vragen/:quiznaam', checkLogin, (req, res) => {
 
         res.json({
             type: quizConf.type,
+            middenkolomCheck: quizConf.middenkolom !== "Nee",
             vragen: gerandomiseerdeVragen
         });
 
