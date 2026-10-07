@@ -1497,7 +1497,8 @@
             // 2. Einddatum en tijd bepalen
             const nu = new Date();
             const opties = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-            document.getElementById('resultaat-datumtijd').innerText = `Afgerond op: ${nu.toLocaleDateString('nl-NL', opties)}`;
+            const geformatteerdeDatum = nu.toLocaleDateString('nl-NL', opties); // Nu correct aangemaakt
+            document.getElementById('resultaat-datumtijd').innerText = `Afgerond op: ${geformatteerdeDatum}`;
 
             // 3. DUURTIJD BEREKENEN
             if (quizStartTijd) {
