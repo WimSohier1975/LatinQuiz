@@ -536,15 +536,20 @@ app.get('/api/opties', checkLogin, (req, res) => {
     }
 });
 
-// De universele Nodemailer transporter configuratie
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST, // De SMTP-server van jouw provider
-  port: parseInt(process.env.EMAIL_PORT) || 465, // De poort (meestal 465 voor SSL of 587 voor TLS)
-  secure: process.env.EMAIL_PORT == 465, // True voor poort 465, false voor poort 587
-  auth: {
-    user: process.env.EMAIL_USER, // Jouw e-mailadres
-    pass: process.env.EMAIL_PASS, // Jouw wachtwoord (of app-wachtwoord)
-  },
+// De universele Nodemailer transporter (Gecorrigeerd voor IPv4 op Render)
+const transporter = nodemailer.createTransport({ 
+ host: process.env.EMAIL_HOST, 
+ port: parseInt(process.env.EMAIL_PORT) || 465, 
+ secure: process.env.EMAIL_PORT == 465, 
+ auth: { 
+   user: process.env.EMAIL_USER, 
+   pass: process.env.EMAIL_PASS, 
+ }, 
+ connectionTimeout: 10000, // 10 seconden timeout marge
+ tls: {
+   rejectUnauthorized: false,
+   ciphers: 'SSLv3' // Dit dwingt Nodemailer via een omweg naar een IPv4-verbinding
+ }
 });
 
 // HET API ENDPOINT: /api/send-result-email
