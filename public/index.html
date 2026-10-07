@@ -1526,39 +1526,31 @@
             // 5. NIEUW: E-mail versturen naar de user voor controle
             console.log("Before start email.");
             try {
-                // Haal de gegevens van de huidige ingelogde gebruiker op
-                console.log("Email: get user.");
-                const sessieRes = await fetch('/api/me');
-                if (sessieRes.ok) {
-                    const userData = await sessieRes.json();
-                    const userEmail = userData.gebruikersnaam; // De username bevat het e-mailadres
+                // We halen de gebruikersnaam rechtstreeks uit het login-invoerveld dat nog op de pagina staat
+                const userEmail = document.getElementById('login-user').value;
+                console.log("Email uitlezen uit formulier:", userEmail);
 
-                    // Controleer of er een e-mailadres is ingevuld en of het geen 'Gast' is
-                    if (userEmail && userEmail.trim() !== "" && userEmail.toLowerCase() !== "gast") {
-
-                        console.log("Email with user: ", userEmail);
-                        // Verstuur de quizresultaten naar de backend api die de mail verzendt
-                        await fetch('/api/send-result-email', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                email: userEmail,
-                                mailTitel: `${userEmail} - ${actieveQuizNaam}`,
-                                quiznaam: actieveQuizNaam,
-                                datumtijd: geformatteerdeDatum,
-                                duurtijd: tijdTekst || "Niet beschikbaar",
-                                eindscore: `${score} / ${vragen.length}`,
-                                percentage: `${percentage}%`
-                            })
-                        });
-                        console.log("Resultaten succesvol verzonden voor e-mailcontrole.");
-                    }
+                if (userEmail && userEmail.trim() !== "" && userEmail.toLowerCase() !== "gast") {
+                    await fetch('/api/send-result-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: userEmail,
+                            mailTitel: `${userEmail} - ${actieveQuizNaam}`,
+                            quiznaam: actieveQuizNaam,
+                            datumtijd: geformatteerdeDatum,
+                            duurtijd: tijdTekst || "Niet beschikbaar",
+                            eindscore: `${score} / ${vragen.length}`,
+                            percentage: `${percentage}%`
+                        })
+                    });
+                    console.log("Resultaten succesvol verzonden voor e-mailcontrole.");
+                } else {
+                    console.log("E-mail overslaan: Gebruiker is leeg of ingelogd als Gast.");
                 }
             } catch (error) {
-                // We loggen de fout in de achtergrond zodat de user de quiz gewoon kan afronden
                 console.error("Fout bij het automatisch versturen van de controle-mail:", error);
             }
-
         }
 
         function toggleAdmin() {
