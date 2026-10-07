@@ -31,16 +31,20 @@ function heeftToegang(gebruikerNiveau, vereistNiveau) {
  return indexGebruiker >= indexVereist;
 }
 
+// 1. VOEG DEZE REGEL TOE (Cruciaal voor hosting op Render!)
+app.set('trust proxy', 1);
 
-app.use(session({
-    secret: 'quiz-super-geheim-sleutel',
-    resave: false,
-    saveUninitialized: false, // Belangrijk: op false zetten
-    cookie: { 
-        secure: process.env.NODE_ENV === 'production', // Moet op false staan voor lokale ontwikkeling (http)
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 uur geldig
-    }
+app.use(session({ 
+ secret: 'quiz-super-geheim-sleutel', 
+ resave: false, 
+ saveUninitialized: false, 
+ cookie: { 
+   // Werkt nu feilloos op zowel localhost (http) als Render (https)
+   secure: process.env.NODE_ENV === 'production', 
+   httpOnly: true, 
+   maxAge: 24 * 60 * 60 * 1000,
+   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Voorkomt cookie-blokkades in moderne browsers
+ } 
 }));
 
 app.use(express.static('public'));
