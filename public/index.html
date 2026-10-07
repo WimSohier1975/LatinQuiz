@@ -1524,8 +1524,10 @@
             document.getElementById('eind-percentage').innerText = `Eindscore percentage: ${percentage}%`;
 
             // 5. NIEUW: E-mail versturen naar de user voor controle
+            console.log("Before start email.");
             try {
                 // Haal de gegevens van de huidige ingelogde gebruiker op
+                console.log("Email: get user.");
                 const sessieRes = await fetch('/api/me');
                 if (sessieRes.ok) {
                     const userData = await sessieRes.json();
@@ -1534,6 +1536,7 @@
                     // Controleer of er een e-mailadres is ingevuld en of het geen 'Gast' is
                     if (userEmail && userEmail.trim() !== "" && userEmail.toLowerCase() !== "gast") {
 
+                        console.log("Email with user: ", userEmail);
                         // Verstuur de quizresultaten naar de backend api die de mail verzendt
                         await fetch('/api/send-result-email', {
                             method: 'POST',
