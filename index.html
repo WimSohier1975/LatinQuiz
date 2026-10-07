@@ -1501,14 +1501,12 @@
             document.getElementById('resultaat-datumtijd').innerText = `Afgerond op: ${geformatteerdeDatum}`;
 
             // 3. DUURTIJD BEREKENEN
+            let tijdTekst = "";
             if (quizStartTijd) {
-                const verschilInSeconden = Math.floor((nu - quizStartTijd) / 1000); // Verschil in milliseconden omrekenen naar seconden
-
+                const verschilInSeconden = Math.floor((nu - quizStartTijd) / 1000);
                 const minuten = Math.floor(verschilInSeconden / 60);
                 const seconden = verschilInSeconden % 60;
 
-                // Zorg dat het er netjes uitziet (bijv. "2 minuten en 05 seconden" of "45 seconden")
-                let tijdTekst = "";
                 if (minuten > 0) {
                     tijdTekst += `${minuten} min. en `;
                 }
