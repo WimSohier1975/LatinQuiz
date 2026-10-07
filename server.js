@@ -37,7 +37,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false, // Belangrijk: op false zetten
     cookie: { 
-        secure: false, // Moet op false staan voor lokale ontwikkeling (http)
+        secure: process.env.NODE_ENV === 'production', // Moet op false staan voor lokale ontwikkeling (http)
         httpOnly: true,
         maxAge: 24 * 60 * 60 * 1000 // 24 uur geldig
     }
