@@ -1,4 +1,6 @@
 const express = require('express');
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const XLSX = require('xlsx');
@@ -544,11 +546,6 @@ const transporter = nodemailer.createTransport({
  auth: { 
    user: process.env.EMAIL_USER, 
    pass: process.env.EMAIL_PASS, 
- }, 
- connectionTimeout: 10000, // 10 seconden timeout marge
- tls: {
-   rejectUnauthorized: false,
-   ciphers: 'SSLv3' // Dit dwingt Nodemailer via een omweg naar een IPv4-verbinding
  }
 });
 
