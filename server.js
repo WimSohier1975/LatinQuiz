@@ -566,7 +566,7 @@ app.post('/api/send-result-email', async (req, res) => {
 
   try {
     const data = await resend.emails.send({
-      from: 'Multi-Quiz Perfect Whizz <info@so-be-it-services.be', 
+      from: 'Multi-Quiz Perfect Whizz <info@so-be-it-services.be>', 
       to: email,
       subject: mailTitel,
       html: `
