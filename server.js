@@ -536,7 +536,7 @@ app.get('/api/opties', checkLogin, (req, res) => {
     }
 });
 
-// Dwing Nodemailer op infrastructuurniveau naar IPv4
+// Gecorrigeerde transporter met 'family: 4' op de hoofdlaag
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT) || 465,
@@ -545,8 +545,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // POOTSTEUN: family moet hier staan (buiten tls) om IPv6 volledig uit te schakelen
+  family: 4, 
   tls: {
-    family: 4 // Dit lost de ENETUNREACH IPv6-fout op ://one.com op
+    // Behoud eventueel andere tls-instellingen, maar haal family hier weg
+    rejectUnauthorized: false // Helpt vaak bij hostingomgevingen zoals One.com
   },
   connectionTimeout: 10000
 });
