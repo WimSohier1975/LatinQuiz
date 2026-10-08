@@ -538,15 +538,29 @@ app.get('/api/opties', checkLogin, (req, res) => {
     }
 });
 
-// De universele Nodemailer transporter (Gecorrigeerd voor IPv4 op Render)
-const transporter = nodemailer.createTransport({ 
- host: process.env.EMAIL_HOST, 
- port: parseInt(process.env.EMAIL_PORT) || 465, 
- secure: process.env.EMAIL_PORT == 465, 
- auth: { 
-   user: process.env.EMAIL_USER, 
-   pass: process.env.EMAIL_PASS, 
- }
+// NIEUWE snel werkende configuratie (Geforceerd op IPv4)
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true, // Gebruik false als poort 587 wordt gebruikt
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  tls: {
+    // Dwingt Node.js om de SMTP-host via IPv4 (A-record) te benaderen
+    family: 4 
+  },
+  connectionTimeout: 5000 // Voorkomt oneindig hangen bij netwerkproblemen
+});
+
+// VOORAF VERIFY: Controleer direct bij het opstarten of de mailverbinding werkt
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("❌ Mailserver verificatie mislukt:", error.message);
+  } else {
+    console.log("✅ Mailserver is succesvol gekoppeld en klaar voor gebruik!");
+  }
 });
 
 // HET API ENDPOINT: /api/send-result-email
