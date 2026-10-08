@@ -1,6 +1,5 @@
 const express = require('express');
 const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const XLSX = require('xlsx');
@@ -53,7 +52,6 @@ app.use(express.static('public'));
 
 const WOORDEN_FILE = 'woorden.xlsx';
 const CONFIG_FILE = 'config.xlsx';
-const PORT = process.env.PORT || 3000;
 
 // Middleware om te checken of iemand Admin is
 const checkAdmin = (req, res, next) => {
@@ -538,28 +536,28 @@ app.get('/api/opties', checkLogin, (req, res) => {
     }
 });
 
-// NIEUWE snel werkende configuratie (Geforceerd op IPv4)
+// Dwing Nodemailer op infrastructuurniveau naar IPv4
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT) || 465,
-  secure: true, // Gebruik false als poort 587 wordt gebruikt
+  secure: true, 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   tls: {
-    // Dwingt Node.js om de SMTP-host via IPv4 (A-record) te benaderen
-    family: 4 
+    family: 4 // Dit lost de ENETUNREACH IPv6-fout op ://one.com op
   },
-  connectionTimeout: 5000 // Voorkomt oneindig hangen bij netwerkproblemen
+  connectionTimeout: 10000
 });
 
-// VOORAF VERIFY: Controleer direct bij het opstarten of de mailverbinding werkt
+// Veilige verificatie die de server NIET laat crashen bij een fout
 transporter.verify(function (error, success) {
   if (error) {
-    console.error("❌ Mailserver verificatie mislukt:", error.message);
+    console.log("⚠️ Mailserver waarschuwing (Verificatie mislukt):", error.message);
+    // We gooien de error NIET omhoog (geen throw), zodat Express gewoon blijft draaien!
   } else {
-    console.log("✅ Mailserver is succesvol gekoppeld en klaar voor gebruik!");
+    console.log("✅ Mailserver verificatie succesvol! Klaar om te verzenden.");
   }
 });
 
@@ -620,4 +618,7 @@ app.post('/api/send-result-email', async (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`Server actief op poort ${PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server actief op poort ${PORT}`);
+});
