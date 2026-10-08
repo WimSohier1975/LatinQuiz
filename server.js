@@ -537,88 +537,56 @@ app.get('/api/opties', checkLogin, (req, res) => {
 });
 
 // Volledig waterdichte IPv4-configuratie via poort 587 (Omzeilt DNS/IPv6-fouten)
-const transporter = nodemailer.createTransport({
-  // We gebruiken het hardgecodeerde IPv4-adres van ://one.com om IPv6-lookups te blokkeren
-  host: "46.30.211.120", 
-  port: 587,
-  secure: false, // VERPLICHT: Moet op false staan voor poort 587 (STARTTLS)
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    // VERPLICHT bij het gebruik van een IP-adres, zodat Node.js weet 
-    // dat het SSL-certificaat gecontroleerd moet worden tegen de domeinnaam ://one.com
-    servername: "://one.com",
-    rejectUnauthorized: false // Voorkomt certificaatblokkades op cloud-omgevingen
-  },
-  connectionTimeout: 10000
-});
+//const transporter = nodemailer.createTransport({
+//  // We gebruiken het hardgecodeerde IPv4-adres van ://one.com om IPv6-lookups te blokkeren
+//  host: "46.30.211.120", 
+//  port: 587,
+//  secure: false, // VERPLICHT: Moet op false staan voor poort 587 (STARTTLS)
+//  auth: {
+//    user: process.env.EMAIL_USER,
+//    pass: process.env.EMAIL_PASS,
+//  },
+//  tls: {
+//    // VERPLICHT bij het gebruik van een IP-adres, zodat Node.js weet 
+//    // dat het SSL-certificaat gecontroleerd moet worden tegen de domeinnaam ://one.com
+//    servername: "://one.com",
+//    rejectUnauthorized: false // Voorkomt certificaatblokkades op cloud-omgevingen
+//  },
+//  connectionTimeout: 10000
+//});
 
-// Veilige verificatie die de server NIET laat crashen bij een fout
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log("⚠️ Mailserver waarschuwing (Verificatie mislukt):", error.message);
-    // We gooien de error NIET omhoog (geen throw), zodat Express gewoon blijft draaien!
-  } else {
-    console.log("✅ Mailserver verificatie succesvol! Klaar om te verzenden.");
-  }
-});
+import { Resend } from 'resend'; // Gebruik require('resend') als je CommonJS gebruikt
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // HET API ENDPOINT: /api/send-result-email
 app.post('/api/send-result-email', async (req, res) => {
   const { email, mailTitel, quiznaam, datumtijd, duurtijd, eindscore, percentage } = req.body;
-
-  // Basis validatie check
-  if (!email) {
-    return res.status(400).json({ error: 'Geen e-mailadres meegegeven' });
-  }
-
-  // De e-mail opties en de opmaak van de e-mailtekst
-  const mailOptions = {
-    from: process.env.EMAIL_USER, // Verzender (jouw vaste adres)
-    to: email,                    // Ontvanger (het e-mailadres van de actieve user)
-    subject: mailTitel,           // Titel: "gebruikersnaam - quiznaam"
-    html: `
-      <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;">
-        <h2 style="color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;">Quiz Resultaat Controle</h2>
-        <p>Beste admin/docent, een gebruiker heeft zojuist een quiz voltooid. Hier zijn de details:</p>
-        
-        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-          <tr>
-            <td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; width: 35%;">Quiznaam:</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${quiznaam}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Afgerond op:</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${datumtijd}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Duurtijd:</td>
-            <td style="padding: 8px; border: 1px solid #ddd;">${duurtijd}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;">Eindscore:</td>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${eindscore}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;">Percentage:</td>
-            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;">${percentage}</td>
-          </tr>
-        </table>
-        
-        <p style="margin-top: 25px; font-size: 0.85rem; color: #888;">Gegenereerd door Multi-Quiz Perfect Whizz.</p>
-      </div>
-    `,
-  };
+  
+  if (!email) return res.status(400).json({ error: 'Geen e-mailadres meegegeven' });
 
   try {
-    // Verstuur de e-mail daadwerkelijk via SMTP
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ success: true, message: 'Resultaten succesvol verzonden' });
+    const data = await resend.emails.send({
+      from: 'Multi-Quiz Perfect Whizz <info@so-be-it-services.be', 
+      to: email,
+      subject: mailTitel,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;">
+          <h2 style="color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;">Quiz Resultaat Controle</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Quiznaam:</td><td style="padding: 8px; border: 1px solid #ddd;">${quiznaam}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Afgerond op:</td><td style="padding: 8px; border: 1px solid #ddd;">${datumtijd}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Duurtijd:</td><td style="padding: 8px; border: 1px solid #ddd;">${duurtijd}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;">Eindscore:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${eindscore}</td></tr>
+            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;">Percentage:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;">${percentage}</td></tr>
+          </table>
+        </div>`
+    });
+
+    console.log("Resultaten succesvol verzonden via Resend HTTP API:", data.id);
+    res.json({ success: true });
   } catch (error) {
-    console.error('Nodemailer fout:', error);
-    res.status(500).json({ error: 'Interne serverfout bij verzenden e-mail' });
+    console.error("Fout bij het versturen via Resend:", error);
+    res.status(500).send("E-mail verzenden mislukt via HTTP.");
   }
 });
 
