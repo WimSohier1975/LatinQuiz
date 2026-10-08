@@ -539,17 +539,16 @@ app.get('/api/opties', checkLogin, (req, res) => {
 // Gecorrigeerde transporter met 'family: 4' op de hoofdlaag
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT) || 465,
-  secure: true, 
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: false, // LET OP: Voor poort 587 MOET secure op false staan!
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  // POOTSTEUN: family moet hier staan (buiten tls) om IPv6 volledig uit te schakelen
-  family: 4, 
+  family: 4, // Dwingt IPv4 af
   tls: {
-    // Behoud eventueel andere tls-instellingen, maar haal family hier weg
-    rejectUnauthorized: false // Helpt vaak bij hostingomgevingen zoals One.com
+    // Dit zorgt ervoor dat Node.js de verbinding veilig upgradet naar TLS via STARTTLS
+    rejectUnauthorized: false 
   },
   connectionTimeout: 10000
 });
