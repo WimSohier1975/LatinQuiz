@@ -538,17 +538,19 @@ app.get('/api/opties', checkLogin, (req, res) => {
 
 // Gecorrigeerde transporter met 'family: 4' op de hoofdlaag
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false, // LET OP: Voor poort 587 MOET secure op false staan!
+  // We gebruiken het directe IPv4-adres om IPv6/DNS-fouten op Render te omzeilen
+  host: "46.30.211.120", 
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true, 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  family: 4, // Dwingt IPv4 af
   tls: {
-    // Dit zorgt ervoor dat Node.js de verbinding veilig upgradet naar TLS via STARTTLS
-    rejectUnauthorized: false 
+    // Verplicht wanneer je verbinding maakt via een IP-adres in plaats van een domeinnaam, 
+    // omdat de SSL-certificaatnaam anders niet overeenkomt met de host
+    rejectUnauthorized: false,
+    servername: "send.one.com" // Vertelt het certificaat welk domein we verwachten
   },
   connectionTimeout: 10000
 });
