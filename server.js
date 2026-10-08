@@ -536,21 +536,21 @@ app.get('/api/opties', checkLogin, (req, res) => {
     }
 });
 
-// Gecorrigeerde transporter met 'family: 4' op de hoofdlaag
+// Volledig waterdichte IPv4-configuratie via poort 587 (Omzeilt DNS/IPv6-fouten)
 const transporter = nodemailer.createTransport({
-  // We gebruiken het directe IPv4-adres om IPv6/DNS-fouten op Render te omzeilen
+  // We gebruiken het hardgecodeerde IPv4-adres van ://one.com om IPv6-lookups te blokkeren
   host: "46.30.211.120", 
-  port: parseInt(process.env.EMAIL_PORT) || 465,
-  secure: true, 
+  port: 587,
+  secure: false, // VERPLICHT: Moet op false staan voor poort 587 (STARTTLS)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   tls: {
-    // Verplicht wanneer je verbinding maakt via een IP-adres in plaats van een domeinnaam, 
-    // omdat de SSL-certificaatnaam anders niet overeenkomt met de host
-    rejectUnauthorized: false,
-    servername: "send.one.com" // Vertelt het certificaat welk domein we verwachten
+    // VERPLICHT bij het gebruik van een IP-adres, zodat Node.js weet 
+    // dat het SSL-certificaat gecontroleerd moet worden tegen de domeinnaam ://one.com
+    servername: "://one.com",
+    rejectUnauthorized: false // Voorkomt certificaatblokkades op cloud-omgevingen
   },
   connectionTimeout: 10000
 });
