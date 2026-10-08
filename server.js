@@ -555,7 +555,7 @@ app.get('/api/opties', checkLogin, (req, res) => {
 //  connectionTimeout: 10000
 //});
 
-import { Resend } from 'resend'; // Gebruik require('resend') als je CommonJS gebruikt
+const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // HET API ENDPOINT: /api/send-result-email
