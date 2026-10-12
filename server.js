@@ -581,21 +581,46 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // HET API ENDPOINT: /api/send-result-email
 app.post('/api/send-result-email', async (req, res) => {
-    const { email, mailTitel, quiznaam, datumtijd, duurtijd, eindscore, percentage, leerling } = req.body;
+    // NIEUW: Vang 'fouten' op uit req.body
+    const { email, mailTitel, quiznaam, datumtijd, duurtijd, eindscore, percentage, leerling, fouten } = req.body;
     if (!email) return res.status(400).json({ error: 'Geen e-mailadres meegegeven' });
-
+    
     try {
-        // Genereer een HTML-rij voor de leerling als deze is meegegeven
         let leerlingRij = "";
         if (leerling && leerling.trim() !== "") {
             leerlingRij = "<tr><td style='padding: 8px; font-weight: bold; background: #fff9e6; border: 1px solid #ddd; color: #b7791f;'>Leerling:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #fff9e6; color: #b7791f;'>" + leerling + "</td></tr>";
+        }
+
+        // NIEUW: Bouw het overzicht van foute antwoorden op
+        let foutenSectie = "";
+        if (fouten && fouten.length > 0) {
+            foutenSectie = "<h3 style='color: #e74c3c; margin-top: 25px; border-bottom: 2px solid #f4f7f6; padding-bottom: 5px;'>Overzicht foute antwoorden</h3>";
+            foutenSectie += "<table style='width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem;'>";
+            foutenSectie += "<tr style='background: #fdf2f2; text-align: left; font-weight: bold;'>";
+            foutenSectie += "<th style='padding: 8px; border: 1px solid #ddd;'>Vraag</th>";
+            foutenSectie += "<th style='padding: 8px; border: 1px solid #ddd; color: #c0392b;'>Gegeven Antwoord</th>";
+            foutenSectie += "<th style='padding: 8px; border: 1px solid #ddd; color: #27ae60;'>Correct Antwoord</th>";
+            foutenSectie += "</tr>";
+
+            fouten.forEach(item => {
+                foutenSectie += "<tr>";
+                foutenSectie += "<td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + item.vraag + "</td>";
+                foutenSectie += "<td style='padding: 8px; border: 1px solid #ddd; color: #c0392b; background: #fff5f5;'>" + item.fout + "</td>";
+                foutenSectie += "<td style='padding: 8px; border: 1px solid #ddd; color: #27ae60; background: #f4fbf7; font-weight: bold;'>" + item.correct + "</td>";
+                foutenSectie += "</tr>";
+            });
+
+            foutenSectie += "</table>";
+        } else if (fouten && fouten.length === 0) {
+            // Als er 0 fouten zijn, toon een mooie felicitatie
+            foutenSectie = "<p style='margin-top: 20px; color: #2ecc71; font-weight: bold;'>Foutloos gemaakt! Uitstekend gedaan! 🎉</p>";
         }
 
         const response = await resend.emails.send({
             from: 'Multi-Quiz-Perfect-Whizz <quiz@contact.so-be-it-services.be>',
             to: email,
             subject: mailTitel,
-            html: "<div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;'><h2 style='color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;'>Quiz Resultaat Controle</h2><table style='width: 100%; border-collapse: collapse; margin-top: 15px;'>" + leerlingRij + "<tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Quiznaam:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + quiznaam + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Afgerond op:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + datumtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Duurtijd:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + duurtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;'>Eindscore:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + eindscore + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;'>Percentage:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;'>" + percentage + "</td></tr></table></div>"
+            html: "<div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;'><h2 style='color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;'>Quiz Resultaat Controle</h2><table style='width: 100%; border-collapse: collapse; margin-top: 15px;'>" + leerlingRij + "<tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Quiznaam:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + quiznaam + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Afgerond op:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + datumtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Duurtijd:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + duurtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;'>Eindscore:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + eindscore + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;'>Percentage:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;'>" + percentage + "</td></tr></table>" + foutenSectie + "</div>"
         });
 
         if (response.data && response.data.id) {
