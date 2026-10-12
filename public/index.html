@@ -1591,8 +1591,8 @@
                 if (userEmail && userEmail.trim() !== "" && userEmail.toLowerCase() !== "gast") {
 
                     let mailOnderwerp = `${userEmail} - ${actieveQuizNaam}`;
-                    if (leerlingNaam !== "") {
-                        mailOnderwerp = `Leerling: ${leerlingNaam} - ${actieveQuizNaam} (${userEmail})`;
+                    if (typeof leerlingNaam !== 'undefined' && leerlingNaam && leerlingNaam.trim() !== "") {
+                        mailOnderwerp = `Leerling: ${leerlingNaam.trim()} - ${actieveQuizNaam}`;
                     }
 
                     await fetch('/api/send-result-email', {
