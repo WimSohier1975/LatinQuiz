@@ -1599,10 +1599,23 @@
                     const htmlLeerlingNaam = document.getElementById('opgeslagen-leerling-naam').value || "";
                     console.log("Opgevraagde leerlingnaam uit HTML:", htmlLeerlingNaam);
 
-                    let mailOnderwerp = `${userEmail} - ${actieveQuizNaam}`;
-                    if (htmlLeerlingNaam && htmlLeerlingNaam.trim() !== "") {
-                        mailOnderwerp = `Leerling: ${htmlLeerlingNaam.trim()} - ${actieveQuizNaam}`;
+                    // Maak een schone variabele zonder eventuele spaties rondom de naam
+                    const opgeschoondeNaam = htmlLeerlingNaam.trim();
+
+                    // Bereid de basistitel voor
+                    let mailOnderwerp = "";
+
+                    // STRIKTE CONTROLE: Als de opgeschoonde naam gevuld is én langer is dan 0 tekens
+                    if (opgeschoondeNaam.length > 0) {
+                        console.log("Check geslaagd! Naam is aanwezig. Onderwerp wordt opgebouwd met leerlingnaam.");
+                        // Dit overschrijft het onderwerp volledig met de leerlingnaam
+                        mailOnderwerp = `Leerling: ${opgeschoondeNaam} - ${actieveQuizNaam}`;
+                    } else {
+                        console.log("Check mislukt! Geen leerlingnaam gevonden. Onderwerp valt terug op e-mailadres.");
+                        mailOnderwerp = `${userEmail} - ${actieveQuizNaam}`;
                     }
+
+                    console.log("Uiteindelijk opgebouwd mailOnderwerp:", mailOnderwerp);
 
                     await fetch('/api/send-result-email', {
                         method: 'POST',
