@@ -91,7 +91,8 @@ app.get('/api/me', (req, res) => {
         res.json({
             ingelogd: true,
             rol: req.session.rol,
-            niveau: req.session.niveau
+            niveau: req.session.niveau,
+            email: req.session.email
         });
     } else {
         res.status(401).json({ ingelogd: false });
@@ -111,6 +112,7 @@ app.post('/api/login', async (req, res) => {
 
         if (gebruiker) {
             //console.log("Gebruiker gevonden, wachtwoord vergelijken...");
+            //Commando voor in terminal om wachtwoord te maken in XLS: node -e "console.log(require('bcrypt').hashSync('JOUW_WACHTWOORD', 10))"
 
             // Vergelijk het ingevoerde wachtwoord met de hash uit Excel
             const match = await bcrypt.compare(String(wachtwoord), String(gebruiker.wachtwoord));
@@ -120,6 +122,7 @@ app.post('/api/login', async (req, res) => {
                 req.session.gebruiker = gebruiker.gebruikersnaam;
                 req.session.rol = gebruiker.rol;
                 req.session.niveau = String(gebruiker.niveau).trim();
+                req.session.email = gebruiker.email ? String(gebruiker.email).trim() : gebruiker.gebruikersnaam;
                 //console.log("Match! Ingelogd als:", gebruiker.rol);
                 return res.json({ success: true, rol: gebruiker.rol });
             } else {
@@ -565,14 +568,20 @@ app.post('/api/send-result-email', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Geen e-mailadres meegegeven' });
 
     try {
+        let leerlingRij = "";
+        if (leerling && leerling.trim() !== "") {
+            leerlingRij = `<tr><td style="padding: 8px; font-weight: bold; background: #fff9e6; border: 1px solid #ddd; color: #b7791f;">Leerling:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #fff9e6; color: #b7791f;">${leerling}</td></tr>`;
+        }
+
         const response = await resend.emails.send({
-            from: 'Multi-Quiz Perfect Whizz <quiz@contact.so-be-it-services.be>',
+            from: 'Multi-Quiz-Perfect-Whizz <quiz@contact.so-be-it-services.be>',
             to: email,
             subject: mailTitel,
             html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;">
           <h2 style="color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;">Quiz Resultaat Controle</h2>
           <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            ${leerlingRij}
             <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Quiznaam:</td><td style="padding: 8px; border: 1px solid #ddd;">${quiznaam}</td></tr>
             <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Afgerond op:</td><td style="padding: 8px; border: 1px solid #ddd;">${datumtijd}</td></tr>
             <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Duurtijd:</td><td style="padding: 8px; border: 1px solid #ddd;">${duurtijd}</td></tr>
