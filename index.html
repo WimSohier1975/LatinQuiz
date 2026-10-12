@@ -770,6 +770,8 @@
         let middenkolomCheck = true;
         let alleWoordenData = [];
         let quizStartTijd = null;
+        let huidigeGebruikerEmail = null;
+        let leerlingNaam = "";
 
         // Menu
         function toggleMenu() {
@@ -1331,6 +1333,22 @@
         // 3. Quiz Logica
         async function startQuiz() {
             const naam = document.getElementById('quiz-selectie').value;
+
+            const loginUser = document.getElementById('login-user').value || "";
+            leerlingNaam = ""; // Reset de naam voor de nieuwe quiz
+
+            if (loginUser.startsWith("DeNegensprong")) {
+                const invoer = prompt("Naam leerling:");
+                if (invoer === null) {
+                    return; // Als de leerling op 'Annuleren' klikt, start de quiz niet
+                }
+                if (invoer.trim() === "") {
+                    alert("Je moet een naam invullen om de quiz te starten.");
+                    return;
+                }
+                leerlingNaam = invoer.trim();
+            }
+
             const res = await fetch(`/api/vragen/${encodeURIComponent(naam)}`);
             if (!res.ok) return alert("Kon quiz niet laden");
 
@@ -1526,10 +1544,17 @@
             console.log("Before start email.");
             try {
                 // We halen de gebruikersnaam rechtstreeks uit het login-invoerveld dat nog op de pagina staat
-                const userEmail = document.getElementById('login-user').value;
-                console.log("Email uitlezen uit formulier:", userEmail);
+                //const userEmail = document.getElementById('login-user').value;
+                const userEmail = huidigeGebruikerEmail;
+                console.log("Email voor verzending:", userEmail);
 
                 if (userEmail && userEmail.trim() !== "" && userEmail.toLowerCase() !== "gast") {
+
+                    let mailOnderwerp = `${userEmail} - ${actieveQuizNaam}`;
+                    if (leerlingNaam !== "") {
+                        mailOnderwerp = `Leerling: ${leerlingNaam} - ${actieveQuizNaam} (${userEmail})`;
+                    }
+
                     await fetch('/api/send-result-email', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1919,6 +1944,7 @@
 
                 if (res.ok) {
                     const data = await res.json();
+                    huidigeGebruikerEmail = data.email || null;
 
                     // Toon niveau in de subtitel van de header
                     const subtitel = document.querySelector('header p');
