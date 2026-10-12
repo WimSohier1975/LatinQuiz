@@ -592,7 +592,7 @@ app.post('/api/send-result-email', async (req, res) => {
         }
 
         const response = await resend.emails.send({
-            from: 'Multi-Quiz Perfect Whizz <quiz@contact.so-be-it-services.be>',
+            from: 'Multi-Quiz-Perfect-Whizz <quiz@contact.so-be-it-services.be>',
             to: email,
             subject: mailTitel,
             html: "<div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;'><h2 style='color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;'>Quiz Resultaat Controle</h2><table style='width: 100%; border-collapse: collapse; margin-top: 15px;'>" + leerlingRij + "<tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Quiznaam:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + quiznaam + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Afgerond op:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + datumtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Duurtijd:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + duurtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;'>Eindscore:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + eindscore + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;'>Percentage:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;'>" + percentage + "</td></tr></table></div>"
