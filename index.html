@@ -580,6 +580,7 @@
 
                 <h1 id="eind-score"></h1>
                 <p id="eind-percentage"></p>
+                <div id="scherm-fouten-overzicht" style="margin-top: 30px; text-align: left; max-height: 300px; overflow-y: auto; padding-right: 5px;"></div>
                 <button onclick="stopQuiz()" style="background: var(--primary); color:white; border:none;">Nog een
                     quiz</button>
             </div>
@@ -1612,6 +1613,34 @@
             document.getElementById('eind-score').innerText = `${score} / ${vragen.length}`;
             const percentage = vragen.length === 0 ? 100 : Math.round((score / vragen.length) * 100);
             document.getElementById('eind-percentage').innerText = `Eindscore percentage: ${percentage}%`;
+
+            // NIEUW: FOUTENLIJST OP HET SCHERM TONEN
+            const foutenContainer = document.getElementById('scherm-fouten-overzicht');
+            foutenContainer.innerHTML = ""; // Maak eerst leeg
+            
+            if (typeof fouteAntwoordenLijst !== 'undefined' && fouteAntwoordenLijst.length > 0) {
+                let html = "<h3 style='color: #e74c3c; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; font-size: 1.1rem;'>Jouw fouten:</h3>";
+                html += "<table style='width:100%; border-collapse: collapse; font-size: 0.85rem; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05);'>";
+                html += "<tr style='background: #fdf2f2; text-align: left; font-weight: bold;'>";
+                html += "<th style='padding: 8px; border: 1px solid #eee;'>Vraag</th>";
+                html += "<th style='padding: 8px; border: 1px solid #eee; color: #c0392b;'>Jouw antwoord</th>";
+                html += "<th style='padding: 8px; border: 1px solid #eee; color: #27ae60;'>Correct</th>";
+                html += "</tr>";
+                
+                fouteAntwoordenLijst.forEach(item => {
+                    html += "<tr>";
+                    html += `<td style='padding: 8px; border: 1px solid #eee; font-weight: bold;'>${item.vraag}</td>`;
+                    html += `<td style='padding: 8px; border: 1px solid #eee; color: #c0392b; background: #fffafb;'>${item.fout}</td>`;
+                    html += `<td style='padding: 8px; border: 1px solid #eee; color: #27ae60; background: #fafd96f; font-weight: bold;'>${item.correct}</td>`;
+                    html += "</tr>";
+                });
+                
+                html += "</table>";
+                foutenContainer.innerHTML = html;
+            } else {
+                // Bericht bij een perfecte score
+                foutenContainer.innerHTML = "<p style='color: #2ecc71; font-weight: bold; text-align: center; margin-top: 15px;'>Geweldig! Je hebt geen enkele fout gemaakt! 🌟</p>";
+            }
 
             // 5. NIEUW: E-mail versturen naar de user voor controle
             console.log("Before start email.");
