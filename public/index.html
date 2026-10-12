@@ -756,18 +756,25 @@
         <span id="copyright-tekst"></span>
     </footer>
 
-    <div id="leerling-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
-        <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box;">
+    <div id="leerling-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div
+            style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box;">
             <h2 style="font-size: 1.3rem; margin-top: 0; color: #2c3e50;">Naam invullen</h2>
 
             <!-- NIEUW: Dit onzichtbare veld bewaart de naam gegarandeerd in de HTML -->
             <input type="hidden" id='opgeslagen-leerling-naam' value=''>
-            
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Voer de naam van de leerling in om de quiz te starten:</p>
-            <input type="text" id="modal-leerling-input" placeholder="Bijv. Jan Janssen" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; box-sizing: border-box; outline: none;">
+
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Voer de naam van de leerling in om de quiz
+                te starten:</p>
+            <input type="text" id="modal-leerling-input" placeholder="Bijv. Jan Janssen"
+                style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; box-sizing: border-box; outline: none;">
             <div style="display: flex; gap: 12px; width: 100%;">
-                <button onclick="bevestigLeerlingNaam()" style="flex: 2; background: var(--primary); color: white; border: none; height: 45px; font-weight: bold; border-radius: 8px; cursor: pointer;">Start Quiz</button>
-                <button onclick="sluitLeerlingModal()" style="flex: 1; background: #95a5a6; color: white; border: none; height: 45px; font-weight: bold; border-radius: 8px; cursor: pointer;">Annuleren</button>
+                <button onclick="bevestigLeerlingNaam()"
+                    style="flex: 2; background: var(--primary); color: white; border: none; height: 45px; font-weight: bold; border-radius: 8px; cursor: pointer;">Start
+                    Quiz</button>
+                <button onclick="sluitLeerlingModal()"
+                    style="flex: 1; background: #95a5a6; color: white; border: none; height: 45px; font-weight: bold; border-radius: 8px; cursor: pointer;">Annuleren</button>
             </div>
         </div>
     </div>
@@ -789,6 +796,7 @@
         let huidigeGebruikerEmail = null;
         let leerlingNaam = "";
         let tijdelijkOpgeslagenQuizNaam = "";
+        let fouteAntwoordenLijst = [];
 
         // Menu
         function toggleMenu() {
@@ -1402,13 +1410,14 @@
             const res = await fetch(`/api/vragen/${encodeURIComponent(quizNaam)}`);
             if (!res.ok) return alert("Kon quiz niet laden");
             const data = await res.json();
-            
+
             vragen = data.vragen;
             middenkolomCheck = data.middenkolomCheck;
             huidigeVraag = 0;
-            score = 0; 
+            score = 0;
+            fouteAntwoordenLijst = [];
             quizStartTijd = new Date();
-            
+
             document.getElementById('start-scherm').style.display = 'none';
             document.getElementById('quiz-gedeelte').style.display = 'block';
             toonVraag();
@@ -1484,6 +1493,7 @@
 
             const buttons = document.querySelectorAll('#antwoorden button');
             const isGoed = (index === correctIndex);
+            const v = vragen[huidigeVraag];
 
             if (isGoed) {
                 btn.classList.add('correct-flash');
@@ -1491,6 +1501,12 @@
             } else {
                 btn.classList.add('wrong-flash');
                 buttons[correctIndex].classList.add('correct-flash');
+
+                fouteAntwoordenLijst.push({
+                    vraag: v.vraag,
+                    fout: v.antwoorden[index],
+                    correct: v.antwoorden[correctIndex]
+                });
             }
 
             const toonScore = Number.isInteger(score) ? score : score.toFixed(1);
@@ -1518,7 +1534,18 @@
 
         // Update beoordeelOpen voor 0.5 punt
         async function beoordeelOpen(goed) {
-            if (goed) score += 0.5; // HALVE PUNT
+            const v = vragen[huidigeVraag];
+            if (goed) {
+                score += 0.5;
+            } else {
+                // NIEUW: Sla de fout op bij een open vraag
+                const ingevoerdAntwoord = document.getElementById('open-input').value || "(leeg ingevuld)";
+                fouteAntwoordenLijst.push({
+                    vraag: v.vraag,
+                    fout: ingevoerdAntwoord,
+                    correct: v.middenkolom
+                });
+            }
             volgendeVraag();
         }
 
@@ -1628,7 +1655,8 @@
                             duurtijd: tijdTekst || "Niet beschikbaar",
                             eindscore: `${score} / ${vragen.length}`,
                             percentage: `${percentage}%`,
-                            leerling: htmlLeerlingNaam.trim()
+                            leerling: htmlLeerlingNaam.trim(),
+                            fouten: fouteAntwoordenLijst
                         })
                     });
                     console.log("Resultaten succesvol verzonden voor e-mailcontrole.");
@@ -2006,29 +2034,29 @@
                 const res = await fetch('/api/me');
                 if (res.ok) {
                     const data = await res.json();
-                    
+
                     // GARANTIE: Vul de e-mailvariabele correct in met de data van de server
                     huidigeGebruikerEmail = data.email || data.username || null;
-                    
+
                     // Toon niveau in de subtitel van de header
                     const subtitel = document.querySelector('header p');
                     if (subtitel) {
                         subtitel.innerText = `Oefen op niveau: ${data.niveau || 'Geen niveau'}`;
                     }
-                    
+
                     // Toon de hoofd-app en verberg het loginscherm
                     document.getElementById('login-scherm').style.display = 'none';
                     document.getElementById('main-content').style.display = 'block';
-                    
+
                     // --- ROL SPECIFIEKE INTERFACE LOGICA ---
                     const isAdmin = data.rol === 'Admin';
                     const isGuest = data.rol === 'Guest';
-                    
+
                     // Beheer de weergave van menu-opties en knoppen op basis van de rol
                     document.querySelectorAll('.admin-only').forEach(el => {
                         el.style.display = isAdmin ? 'block' : 'none';
                     });
-                    
+
                     document.querySelectorAll('.fav-only').forEach(el => {
                         // Verberg als het een gast is ÓF als de gebruikersnaam begint met DeNegensprong
                         if (isGuest || (data.username && data.username.startsWith("DeNegensprong"))) {
@@ -2037,14 +2065,14 @@
                             el.style.display = 'block';
                         }
                     });
-                    
+
                     // Activeer specifieke achtergrondprocessen per rol
                     if (isAdmin) {
                         laadGebruikersLijst();
                     } else if (isGuest) {
                         setTimeout(beperkDropdownVoorGast, 500);
                     }
-                    
+
                     // Initialiseer de quizdata en stuur de gebruiker ALTIJD naar het schone startscherm (Home)
                     await init();
                     navigeer('quiz-selectie');
