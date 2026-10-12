@@ -1591,9 +1591,11 @@
                 if (userEmail && userEmail.trim() !== "" && userEmail.toLowerCase() !== "gast") {
 
                     let mailOnderwerp = `${userEmail} - ${actieveQuizNaam}`;
+                    console.log("LeerlingNaam:", LeerlingNaam);
                     if (typeof leerlingNaam !== 'undefined' && leerlingNaam && leerlingNaam.trim() !== "") {
                         mailOnderwerp = `Leerling: ${leerlingNaam.trim()} - ${actieveQuizNaam}`;
                     }
+                    console.log("mailOnderwerp:", mailOnderwerp);
 
                     await fetch('/api/send-result-email', {
                         method: 'POST',
