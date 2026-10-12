@@ -581,32 +581,21 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // HET API ENDPOINT: /api/send-result-email
 app.post('/api/send-result-email', async (req, res) => {
-    const { email, mailTitel, quiznaam, datumtijd, duurtijd, eindscore, percentage } = req.body;
-
+    const { email, mailTitel, quiznaam, datumtijd, duurtijd, eindscore, percentage, leerling } = req.body;
     if (!email) return res.status(400).json({ error: 'Geen e-mailadres meegegeven' });
 
     try {
+        // Genereer een HTML-rij voor de leerling als deze is meegegeven
         let leerlingRij = "";
         if (leerling && leerling.trim() !== "") {
-            leerlingRij = `<tr><td style="padding: 8px; font-weight: bold; background: #fff9e6; border: 1px solid #ddd; color: #b7791f;">Leerling:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #fff9e6; color: #b7791f;">${leerling}</td></tr>`;
+            leerlingRij = "<tr><td style='padding: 8px; font-weight: bold; background: #fff9e6; border: 1px solid #ddd; color: #b7791f;'>Leerling:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #fff9e6; color: #b7791f;'>" + leerling + "</td></tr>";
         }
 
         const response = await resend.emails.send({
-            from: 'Multi-Quiz-Perfect-Whizz <quiz@contact.so-be-it-services.be>',
+            from: 'Multi-Quiz Perfect Whizz <quiz@contact.so-be-it-services.be>',
             to: email,
             subject: mailTitel,
-            html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;">
-          <h2 style="color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;">Quiz Resultaat Controle</h2>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-            ${leerlingRij}
-            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Quiznaam:</td><td style="padding: 8px; border: 1px solid #ddd;">${quiznaam}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Afgerond op:</td><td style="padding: 8px; border: 1px solid #ddd;">${datumtijd}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;">Duurtijd:</td><td style="padding: 8px; border: 1px solid #ddd;">${duurtijd}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;">Eindscore:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">${eindscore}</td></tr>
-            <tr><td style="padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;">Percentage:</td><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;">${percentage}</td></tr>
-          </table>
-        </div>`
+            html: "<div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;'><h2 style='color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;'>Quiz Resultaat Controle</h2><table style='width: 100%; border-collapse: collapse; margin-top: 15px;'>" + leerlingRij + "<tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Quiznaam:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + quiznaam + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Afgerond op:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + datumtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Duurtijd:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + duurtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;'>Eindscore:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + eindscore + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;'>Percentage:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;'>" + percentage + "</td></tr></table></div>"
         });
 
         if (response.data && response.data.id) {
@@ -616,8 +605,8 @@ app.post('/api/send-result-email', async (req, res) => {
         }
         res.json({ success: true });
     } catch (error) {
-        console.error("Fout bij het versturen via Resend:", error);
-        res.status(500).send("E-mail verzenden mislukt via HTTP.");
+        console.error("Fout bij het verzenden van e-mail via Resend:", error);
+        res.status(500).send("Fout bij verzenden e-mail: " + error.message);
     }
 });
 
