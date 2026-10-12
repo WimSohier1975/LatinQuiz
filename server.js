@@ -88,11 +88,29 @@ const checkLogin = (req, res, next) => {
 
 app.get('/api/me', (req, res) => {
     if (req.session && req.session.ingelogd) {
+        // Als het e-mailadres nog niet in de sessie staat, zoeken we het alsnog op in Excel
+        if (!req.session.email) {
+            try {
+                const workbook = XLSX.readFile(CONFIG_FILE);
+                const gebruikers = XLSX.utils.sheet_to_json(workbook.Sheets['gebruikers']);
+                const gebruiker = gebruikers.find(u => String(u.gebruikersnaam).trim() === String(req.session.gebruiker).trim());
+                if (gebruiker && gebruiker.email) {
+                    req.session.email = String(gebruiker.email).trim();
+                } else {
+                    req.session.email = req.session.gebruiker; // Terugvaloptie
+                }
+            } catch (err) {
+                console.error("Fout bij realtime opzoeken e-mail:", err);
+                req.session.email = req.session.gebruiker;
+            }
+        }
+
         res.json({
             ingelogd: true,
             rol: req.session.rol,
             niveau: req.session.niveau,
-            email: req.session.email
+            username: req.session.gebruiker, // Zorgt ervoor dat data.username gevuld is
+            email: req.session.email          // Dit garandeert dat het e-mailadres meekomt!
         });
     } else {
         res.status(401).json({ ingelogd: false });

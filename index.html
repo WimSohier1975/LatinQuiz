@@ -855,6 +855,13 @@
             const data = await res.json();
 
             if (res.ok && data.success) {
+                // Voeg dit als eerste regel toe om de e-mailvariabele direct op te halen:
+                const meRes = await fetch('/api/me');
+                if (meRes.ok) {
+                    const meData = await meRes.json();
+                    huidigeGebruikerEmail = meData.email || meData.username || null;
+                }
+
                 // 1. Schermen wisselen: login weg, main-content aan
                 document.getElementById('login-scherm').style.display = 'none';
                 document.getElementById('main-content').style.display = 'block';
@@ -1974,57 +1981,50 @@
         async function checkSessie() {
             try {
                 const res = await fetch('/api/me');
-
                 if (res.ok) {
                     const data = await res.json();
-                    huidigeGebruikerEmail = data.email || null;
-
+                    
+                    // GARANTIE: Vul de e-mailvariabele correct in met de data van de server
+                    huidigeGebruikerEmail = data.email || data.username || null;
+                    
                     // Toon niveau in de subtitel van de header
                     const subtitel = document.querySelector('header p');
                     if (subtitel) {
                         subtitel.innerText = `Oefen op niveau: ${data.niveau || 'Geen niveau'}`;
                     }
-
+                    
                     // Toon de hoofd-app en verberg het loginscherm
                     document.getElementById('login-scherm').style.display = 'none';
                     document.getElementById('main-content').style.display = 'block';
-
+                    
                     // --- ROL SPECIFIEKE INTERFACE LOGICA ---
                     const isAdmin = data.rol === 'Admin';
                     const isGuest = data.rol === 'Guest';
-                    const isNegensprong = data.username && data.username.startsWith("DeNegensprong");
-
-                    // Zorg ervoor dat de administratieve panelen bij de start ALTIJD verborgen zijn
-                    // Navigatie naar deze panelen verloopt uitsluitend via het menu
-                    document.getElementById('admin-user-beheer').style.setProperty('display', 'none', 'important');
-                    document.getElementById('admin-paneel').style.setProperty('display', 'none', 'important');
-
+                    
                     // Beheer de weergave van menu-opties en knoppen op basis van de rol
                     document.querySelectorAll('.admin-only').forEach(el => {
                         el.style.display = isAdmin ? 'block' : 'none';
                     });
-
+                    
                     document.querySelectorAll('.fav-only').forEach(el => {
-                        if (isGuest || intentIsNegensprongUser(data.username)) {
+                        // Verberg als het een gast is ÓF als de gebruikersnaam begint met DeNegensprong
+                        if (isGuest || (data.username && data.username.startsWith("DeNegensprong"))) {
                             el.style.setProperty('display', 'none', 'important');
                         } else {
                             el.style.display = 'block';
                         }
                     });
-
+                    
                     // Activeer specifieke achtergrondprocessen per rol
                     if (isAdmin) {
-                        // Laad de data alvast in het geheugen, maar houd het paneel gesloten
                         laadGebruikersLijst();
-                    }
-                    else if (isGuest) {
+                    } else if (isGuest) {
                         setTimeout(beperkDropdownVoorGast, 500);
                     }
-
+                    
                     // Initialiseer de quizdata en stuur de gebruiker ALTIJD naar het schone startscherm (Home)
                     await init();
                     navigeer('quiz-selectie');
-
                 } else {
                     document.getElementById('login-scherm').style.display = 'block';
                     document.getElementById('main-content').style.display = 'none';
