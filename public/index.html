@@ -759,6 +759,10 @@
     <div id="leerling-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
         <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box;">
             <h2 style="font-size: 1.3rem; margin-top: 0; color: #2c3e50;">Naam invullen</h2>
+
+            <!-- NIEUW: Dit onzichtbare veld bewaart de naam gegarandeerd in de HTML -->
+            <input type="hidden" id='opgeslagen-leerling-naam' value=''>
+            
             <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Voer de naam van de leerling in om de quiz te starten:</p>
             <input type="text" id="modal-leerling-input" placeholder="Bijv. Jan Janssen" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; box-sizing: border-box; outline: none;">
             <div style="display: flex; gap: 12px; width: 100%;">
@@ -1381,7 +1385,9 @@
                 alert("Je moet een naam invullen om de quiz te starten.");
                 return;
             }
-            leerlingNaam = invoer.trim();
+            // NIEUW: Sla de naam hardop op in het verborgen HTML-element
+            document.getElementById('opgeslagen-leerling-naam').value = invoer.trim();
+
             document.getElementById('leerling-modal').style.display = 'none'; // Sluit modal
             VoerEchteQuizStartUit(tijdelijkOpgeslagenQuizNaam);
         }
@@ -1589,13 +1595,14 @@
                 console.log("Email voor verzending:", userEmail);
 
                 if (userEmail && userEmail.trim() !== "" && userEmail.toLowerCase() !== "gast") {
+                    // Haal de opgeslagen naam rechtstreeks uit het verborgen HTML-veld
+                    const htmlLeerlingNaam = document.getElementById('opgeslagen-leerling-naam').value || "";
+                    console.log("Opgevraagde leerlingnaam uit HTML:", htmlLeerlingNaam);
 
                     let mailOnderwerp = `${userEmail} - ${actieveQuizNaam}`;
-                    console.log("LeerlingNaam:", LeerlingNaam);
-                    if (typeof leerlingNaam !== 'undefined' && leerlingNaam && leerlingNaam.trim() !== "") {
-                        mailOnderwerp = `Leerling: ${leerlingNaam.trim()} - ${actieveQuizNaam}`;
+                    if (htmlLeerlingNaam && htmlLeerlingNaam.trim() !== "") {
+                        mailOnderwerp = `Leerling: ${htmlLeerlingNaam.trim()} - ${actieveQuizNaam}`;
                     }
-                    console.log("mailOnderwerp:", mailOnderwerp);
 
                     await fetch('/api/send-result-email', {
                         method: 'POST',
@@ -1607,7 +1614,8 @@
                             datumtijd: geformatteerdeDatum,
                             duurtijd: tijdTekst || "Niet beschikbaar",
                             eindscore: `${score} / ${vragen.length}`,
-                            percentage: `${percentage}%`
+                            percentage: `${percentage}%`,
+                            leerling: htmlLeerlingNaam.trim()
                         })
                     });
                     console.log("Resultaten succesvol verzonden voor e-mailcontrole.");
