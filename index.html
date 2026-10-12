@@ -756,6 +756,18 @@
         <span id="copyright-tekst"></span>
     </footer>
 
+    <div id="leerling-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box;">
+            <h2 style="font-size: 1.3rem; margin-top: 0; color: #2c3e50;">Naam invullen</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 20px;">Voer de naam van de leerling in om de quiz te starten:</p>
+            <input type="text" id="modal-leerling-input" placeholder="Bijv. Jan Janssen" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; box-sizing: border-box; outline: none;">
+            <div style="display: flex; gap: 12px; width: 100%;">
+                <button onclick="bevestigLeerlingNaam()" style="flex: 2; background: var(--primary); color: white; border: none; height: 45px; font-weight: bold; border-radius: 8px; cursor: pointer;">Start Quiz</button>
+                <button onclick="sluitLeerlingModal()" style="flex: 1; background: #95a5a6; color: white; border: none; height: 45px; font-weight: bold; border-radius: 8px; cursor: pointer;">Annuleren</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const niveauOrde = [
             'B1', 'B2', 'B3', 'B4', 'B5', 'B6',
@@ -772,6 +784,7 @@
         let quizStartTijd = null;
         let huidigeGebruikerEmail = null;
         let leerlingNaam = "";
+        let tijdelijkOpgeslagenQuizNaam = "";
 
         // Menu
         function toggleMenu() {
@@ -849,6 +862,7 @@
                 // 2. Rol-afhankelijke elementen in het MENU en de APP instellen
                 const isAdmin = data.rol === 'Admin';
                 const isGuest = data.rol === 'Guest';
+                const loginUser = document.getElementById('login-user').value || "";
 
                 // Update de zichtbaarheid van admin-onderdelen (zoals menu-knoppen)
                 document.querySelectorAll('.admin-only').forEach(el => {
@@ -857,7 +871,11 @@
 
                 // Update favorieten-knoppen (verbergen voor gasten)
                 document.querySelectorAll('.fav-only').forEach(el => {
-                    el.style.display = isGuest ? 'none' : 'block';
+                    if (isGuest || loginUser.startsWith("DeNegensprong")) {
+                        el.style.setProperty('display', 'none', 'important'); // NIEUW: Verberg direct
+                    } else {
+                        el.style.display = 'block';
+                    }
                 });
 
                 // 3. Specifieke acties per rol
@@ -1333,38 +1351,53 @@
         // 3. Quiz Logica
         async function startQuiz() {
             const naam = document.getElementById('quiz-selectie').value;
-
             const loginUser = document.getElementById('login-user').value || "";
-            leerlingNaam = ""; // Reset de naam voor de nieuwe quiz
+            leerlingNaam = ""; // Reset
 
             if (loginUser.startsWith("DeNegensprong")) {
-                const invoer = prompt("Naam leerling:");
-                if (invoer === null) {
-                    return; // Als de leerling op 'Annuleren' klikt, start de quiz niet
-                }
-                if (invoer.trim() === "") {
-                    alert("Je moet een naam invullen om de quiz te starten.");
-                    return;
-                }
-                leerlingNaam = invoer.trim();
+                // Sla de quiznaam op, toon de mooie HTML modal en zet de focus op het invoerveld
+                tijdelijkOpgeslagenQuizNaam = naam;
+                document.getElementById('modal-leerling-input').value = "";
+                document.getElementById('leerling-modal').style.display = 'flex';
+                document.getElementById('modal-leerling-input').focus();
+                return; // Stop hier, de rest gebeurt na het klikken op 'Start Quiz' in de modal
             }
 
-            const res = await fetch(`/api/vragen/${encodeURIComponent(naam)}`);
+            // Normale verloop voor andere gebruikers
+            VoerEchteQuizStartUit(naam);
+        }
+
+        // NIEUW: Wordt aangeroepen wanneer de leerling op 'Start Quiz' drukt in de HTML-modal
+        function bevestigLeerlingNaam() {
+            const invoer = document.getElementById('modal-leerling-input').value;
+            if (!invoer || invoer.trim() === "") {
+                alert("Je moet een naam invullen om de quiz te starten.");
+                return;
+            }
+            leerlingNaam = invoer.trim();
+            document.getElementById('leerling-modal').style.display = 'none'; // Sluit modal
+            VoerEchteQuizStartUit(tijdelijkOpgeslagenQuizNaam);
+        }
+
+        // NIEUW: Sluit de modal als er op annuleren wordt geklikt
+        function sluitLeerlingModal() {
+            document.getElementById('leerling-modal').style.display = 'none';
+        }
+
+        // NIEUW: De daadwerkelijke AJAX-aanroep om de quiz in te laden (afgesplitst voor herbruikbaarheid)
+        async function VoerEchteQuizStartUit(quizNaam) {
+            const res = await fetch(`/api/vragen/${encodeURIComponent(quizNaam)}`);
             if (!res.ok) return alert("Kon quiz niet laden");
-
             const data = await res.json();
-
-            // De server stuurt nu { type: 'F', vragen: [...] }
+            
             vragen = data.vragen;
             middenkolomCheck = data.middenkolomCheck;
             huidigeVraag = 0;
-            score = 0; // Reset naar 0
-
+            score = 0; 
             quizStartTijd = new Date();
-
+            
             document.getElementById('start-scherm').style.display = 'none';
             document.getElementById('quiz-gedeelte').style.display = 'block';
-
             toonVraag();
         }
 
@@ -1959,6 +1992,7 @@
                     // --- ROL SPECIFIEKE INTERFACE LOGICA ---
                     const isAdmin = data.rol === 'Admin';
                     const isGuest = data.rol === 'Guest';
+                    const isNegensprong = data.username && data.username.startsWith("DeNegensprong");
 
                     // Zorg ervoor dat de administratieve panelen bij de start ALTIJD verborgen zijn
                     // Navigatie naar deze panelen verloopt uitsluitend via het menu
@@ -1971,7 +2005,11 @@
                     });
 
                     document.querySelectorAll('.fav-only').forEach(el => {
-                        el.style.display = isGuest ? 'none' : 'block';
+                        if (isGuest || intentIsNegensprongUser(data.username)) {
+                            el.style.setProperty('display', 'none', 'important');
+                        } else {
+                            el.style.display = 'block';
+                        }
                     });
 
                     // Activeer specifieke achtergrondprocessen per rol
@@ -1995,6 +2033,11 @@
                 document.getElementById('login-scherm').style.display = 'block';
                 console.error("Sessie check mislukt:", e);
             }
+        }
+
+        function intentIsNegensprongUser(username) {
+            const loginInput = document.getElementById('login-user').value || "";
+            return username?.startsWith("DeNegensprong") || loginInput.startsWith("DeNegensprong");
         }
 
         // Hulpfunctie om de dropdown te filteren naar de eerste quiz
