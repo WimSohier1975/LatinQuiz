@@ -581,29 +581,36 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // HET API ENDPOINT: /api/send-result-email
 app.post('/api/send-result-email', async (req, res) => {
-    // NIEUW: Vang 'fouten' op uit req.body
     const { email, mailTitel, quiznaam, datumtijd, duurtijd, eindscore, percentage, leerling, fouten } = req.body;
     if (!email) return res.status(400).json({ error: 'Geen e-mailadres meegegeven' });
     
+    console.log("Endpoint /api/send-result-email succesvol aangeroepen voor:", leerling || email);
+    
     try {
         // ==========================================================
-        // 1. DYNAMISCH LOGGEN NAAR CONFIG.XLSX (NIEUW TABBLAD 'log')
+        // 1. DYNAMISCH LOGGEN NAAR CONFIG.XLSX (VERBETERD)
         // ==========================================================
+        console.log("Starten met Excel log-proces...");
         try {
-            // Open het bestaande config-bestand of maak een nieuwe als deze niet bestaat
             const workbook = fs.existsSync(CONFIG_FILE) ? XLSX.readFile(CONFIG_FILE) : XLSX.utils.book_new();
             
-            // Haal de bestaande logs op uit het tabblad 'log', of start met een lege lijst
-            let logData = workbook.Sheets['log'] ? XLSX.utils.sheet_to_json(workbook.Sheets['log']) : [];
+            // Haal bestaande data op of start een lege array
+            let logData = [];
+            if (workbook.Sheets['log']) {
+                logData = XLSX.utils.sheet_to_json(workbook.Sheets['log']);
+                console.log("Bestaand log-tabblad gevonden met " + logData.length + " regels.");
+            } else {
+                console.log("Nieuw log-tabblad wordt aangemaakt.");
+            }
             
-            // Zet de foute antwoorden om naar een leesbare tekstreeks voor in de Excel-cel
+            // Zet fouten om naar tekstcel
             let fouteAntwoordenTekst = "Geen (Foutloos!)";
             if (fouten && fouten.length > 0) {
                 fouteAntwoordenTekst = fouten.map(f => `${f.vraag} (Fout: ${f.fout} -> Correct: ${f.correct})`).join(', ');
             }
             
-            // Voeg de nieuwe logrij toe met alle relevante kolommen
-            logData.push({
+            // Nieuw log-object bouwen
+            const nieuweLogRegel = {
                 'Datum & Tijd': datumtijd,
                 'Leerling / Gebruiker': leerling && leerling.trim() !== "" ? leerling.trim() : email,
                 'Account E-mail': email,
@@ -612,74 +619,68 @@ app.post('/api/send-result-email', async (req, res) => {
                 'Eindscore': eindscore,
                 'Percentage': percentage,
                 'Gemaakte Fouten': fouteAntwoordenTekst
-            });
+            };
             
-            // Schrijf de bijgewerkte gegevens terug naar het tabblad 'log'
+            logData.push(nieuweLogRegel);
+            
+            // Maak de nieuwe worksheet aan
             const logSheet = XLSX.utils.json_to_sheet(logData);
-            workbook.Sheets['log'] = logSheet;
             
-            // Zorg ervoor dat het tabblad 'log' geregistreerd staat in de lijst met tabbladen
-            if (!workbook.SheetNames.includes('log')) {
-                workbook.SheetNames.push('log');
+            // CORRECTE MANIER VAN TOEVOEGEN/OVERSCHRIJVEN:
+            if (workbook.SheetNames.includes('log')) {
+                // Als het tabblad al bestaat, overschrijven we simpelweg de data-inhoud ervan
+                workbook.Sheets['log'] = logSheet;
+            } else {
+                // Als het tabblad gloednieuw is, gebruiken we de officiële functie van XLSX
+                XLSX.utils.book_append_sheet(workbook, logSheet, 'log');
             }
             
-            // Sla het Excel-bestand definitief op
+            // Opslaan naar schijf
             XLSX.writeFile(workbook, CONFIG_FILE);
-            console.log("Quizresultaat succesvol weggeschreven naar config.xlsx (tabblad 'log')");
+            console.log("Quizresultaat SUCCESVOL weggeschreven naar config.xlsx (tabblad 'log')! 🎉");
             
         } catch (excelError) {
-            // We loggen de fout op de server, maar laten de e-mailverzending hierdoor niet crashen
-            console.error("Fout tijdens het schrijven naar de Excel-log:", excelError);
+            console.error("KRITIEKE FOUT TIJDENS EXCEL LOGGEN:", excelError);
         }
         // ==========================================================
 
         // 2. E-MAIL VERZENDEN VIA RESEND (Bestaande werkende logica)
+        console.log("Starten met e-mail verzendproces via Resend...");
         let leerlingRij = "";
         if (leerling && leerling.trim() !== "") {
             leerlingRij = "<tr><td style='padding: 8px; font-weight: bold; background: #fff9e6; border: 1px solid #ddd; color: #b7791f;'>Leerling:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #fff9e6; color: #b7791f;'>" + leerling + "</td></tr>";
         }
 
-        // NIEUW: Bouw het overzicht van foute antwoorden op
         let foutenSectie = "";
         if (fouten && fouten.length > 0) {
             foutenSectie = "<h3 style='color: #e74c3c; margin-top: 25px; border-bottom: 2px solid #f4f7f6; padding-bottom: 5px;'>Overzicht foute antwoorden</h3>";
             foutenSectie += "<table style='width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem;'>";
-            foutenSectie += "<tr style='background: #fdf2f2; text-align: left; font-weight: bold;'>";
-            foutenSectie += "<th style='padding: 8px; border: 1px solid #ddd;'>Vraag</th>";
-            foutenSectie += "<th style='padding: 8px; border: 1px solid #ddd; color: #c0392b;'>Gegeven Antwoord</th>";
-            foutenSectie += "<th style='padding: 8px; border: 1px solid #ddd; color: #27ae60;'>Correct Antwoord</th>";
-            foutenSectie += "</tr>";
-
+            foutenSectie += "<tr style='background: #fdf2f2; text-align: left; font-weight: bold;'><th style='padding: 8px; border: 1px solid #ddd;'>Vraag</th><th style='padding: 8px; border: 1px solid #ddd; color: #c0392b;'>Gegeven Antwoord</th><th style='padding: 8px; border: 1px solid #ddd; color: #27ae60;'>Correct Antwoord</th></tr>";
             fouten.forEach(item => {
-                foutenSectie += "<tr>";
-                foutenSectie += "<td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + item.vraag + "</td>";
-                foutenSectie += "<td style='padding: 8px; border: 1px solid #ddd; color: #c0392b; background: #fff5f5;'>" + item.fout + "</td>";
-                foutenSectie += "<td style='padding: 8px; border: 1px solid #ddd; color: #27ae60; background: #f4fbf7; font-weight: bold;'>" + item.correct + "</td>";
-                foutenSectie += "</tr>";
+                foutenSectie += "<tr><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + item.vraag + "</td><td style='padding: 8px; border: 1px solid #ddd; color: #c0392b; background: #fff5f5;'>" + item.fout + "</td><td style='padding: 8px; border: 1px solid #ddd; color: #27ae60; background: #f4fbf7; font-weight: bold;'>" + item.correct + "</td></tr>";
             });
-
             foutenSectie += "</table>";
         } else if (fouten && fouten.length === 0) {
-            // Als er 0 fouten zijn, toon een mooie felicitatie
             foutenSectie = "<p style='margin-top: 20px; color: #2ecc71; font-weight: bold;'>Foutloos gemaakt! Uitstekend gedaan! 🎉</p>";
         }
 
         const response = await resend.emails.send({
-            from: 'Multi-Quiz-Perfect-Whizz <quiz@contact.so-be-it-services.be>',
+            from: 'Multi-Quiz Perfect Whizz <quiz@contact.so-be-it-services.be>',
             to: email,
             subject: mailTitel,
             html: "<div style='font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px;'><h2 style='color: #4a90e2; border-bottom: 2px solid #f4f7f6; padding-bottom: 10px;'>Quiz Resultaat Controle</h2><table style='width: 100%; border-collapse: collapse; margin-top: 15px;'>" + leerlingRij + "<tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Quiznaam:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + quiznaam + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Afgerond op:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + datumtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd;'>Duurtijd:</td><td style='padding: 8px; border: 1px solid #ddd;'>" + duurtijd + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2c3e50;'>Eindscore:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold;'>" + eindscore + "</td></tr><tr><td style='padding: 8px; font-weight: bold; background: #f8f9fa; border: 1px solid #ddd; color: #2ecc71;'>Percentage:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #2ecc71;'>" + percentage + "</td></tr></table>" + foutenSectie + "</div>"
         });
 
         if (response.data && response.data.id) {
-            console.log("Resultaten succesvol verzonden via Resend HTTP API:", response.data.id);
+            console.log("E-mail succesvol verzonden via Resend HTTP API ID:", response.data.id);
         } else if (response.error) {
             console.error("Resend API waarschuwing:", response.error.message);
         }
+        
         res.json({ success: true });
     } catch (error) {
-        console.error("Fout bij het verzenden van e-mail via Resend:", error);
-        res.status(500).send("Fout bij verzenden e-mail: " + error.message);
+        console.error("Fout in hoofdstructuur van endpoint:", error);
+        res.status(500).send("Fout bij verwerken verzoek: " + error.message);
     }
 });
 
