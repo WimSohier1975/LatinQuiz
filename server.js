@@ -586,6 +586,54 @@ app.post('/api/send-result-email', async (req, res) => {
     if (!email) return res.status(400).json({ error: 'Geen e-mailadres meegegeven' });
     
     try {
+        // ==========================================================
+        // 1. DYNAMISCH LOGGEN NAAR CONFIG.XLSX (NIEUW TABBLAD 'log')
+        // ==========================================================
+        try {
+            // Open het bestaande config-bestand of maak een nieuwe als deze niet bestaat
+            const workbook = fs.existsSync(CONFIG_FILE) ? XLSX.readFile(CONFIG_FILE) : XLSX.utils.book_new();
+            
+            // Haal de bestaande logs op uit het tabblad 'log', of start met een lege lijst
+            let logData = workbook.Sheets['log'] ? XLSX.utils.sheet_to_json(workbook.Sheets['log']) : [];
+            
+            // Zet de foute antwoorden om naar een leesbare tekstreeks voor in de Excel-cel
+            let fouteAntwoordenTekst = "Geen (Foutloos!)";
+            if (fouten && fouten.length > 0) {
+                fouteAntwoordenTekst = fouten.map(f => `${f.vraag} (Fout: ${f.fout} -> Correct: ${f.correct})`).join(', ');
+            }
+            
+            // Voeg de nieuwe logrij toe met alle relevante kolommen
+            logData.push({
+                'Datum & Tijd': datumtijd,
+                'Leerling / Gebruiker': leerling && leerling.trim() !== "" ? leerling.trim() : email,
+                'Account E-mail': email,
+                'Quiznaam': quiznaam,
+                'Totale Duurtijd': duurtijd || "Niet beschikbaar",
+                'Eindscore': eindscore,
+                'Percentage': percentage,
+                'Gemaakte Fouten': fouteAntwoordenTekst
+            });
+            
+            // Schrijf de bijgewerkte gegevens terug naar het tabblad 'log'
+            const logSheet = XLSX.utils.json_to_sheet(logData);
+            workbook.Sheets['log'] = logSheet;
+            
+            // Zorg ervoor dat het tabblad 'log' geregistreerd staat in de lijst met tabbladen
+            if (!workbook.SheetNames.includes('log')) {
+                workbook.SheetNames.push('log');
+            }
+            
+            // Sla het Excel-bestand definitief op
+            XLSX.writeFile(workbook, CONFIG_FILE);
+            console.log("Quizresultaat succesvol weggeschreven naar config.xlsx (tabblad 'log')");
+            
+        } catch (excelError) {
+            // We loggen de fout op de server, maar laten de e-mailverzending hierdoor niet crashen
+            console.error("Fout tijdens het schrijven naar de Excel-log:", excelError);
+        }
+        // ==========================================================
+
+        // 2. E-MAIL VERZENDEN VIA RESEND (Bestaande werkende logica)
         let leerlingRij = "";
         if (leerling && leerling.trim() !== "") {
             leerlingRij = "<tr><td style='padding: 8px; font-weight: bold; background: #fff9e6; border: 1px solid #ddd; color: #b7791f;'>Leerling:</td><td style='padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #fff9e6; color: #b7791f;'>" + leerling + "</td></tr>";
